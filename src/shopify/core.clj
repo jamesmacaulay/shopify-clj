@@ -1,7 +1,9 @@
 (ns shopify.core
   (:require [clojure.string :as str])
   (:require digest)
-  (:require [clj-http.client :as client]))
+  (:require clj-http.client))
+
+(defn http-request [req] (clj-http.client/request (assoc req :throw-exceptions false)))
 
 (defn user-auth-url
   "Take an options map and return the URL where the user can authorize the app."
@@ -27,6 +29,7 @@
   [{:keys [shop app code]}]
   { :method :post
     :url (str "https://" shop "/admin/oauth/access_token")
+    :accept :json
     :as :json
     :form-params {
       :client_id (app :key)
@@ -36,5 +39,21 @@
 (defn fetch-access-token
   "Takes an options map and fires off a blocking POST to Shopify which requests a permanent token."
   [options]
-  (let [response (client/request (build-access-token-request options))]
+  (let [response (http-request (build-access-token-request options))]
     (get-in response [:body :access_token])))
+
+
+(defn build-resource-request
+  [{:keys [shop access-token] :as connection} method resource-path params]
+  {
+    :method method
+    :url (str "https://" shop "/admin/" resource-path ".json")
+    :headers {"X-Shopify-Access-Token" access-token}
+    :accept :json
+    :as :json
+    :query-params params
+    })
+
+(defn perform-resource-request
+  [& args]
+  (http-request (apply build-resource-request args)))
