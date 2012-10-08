@@ -7,7 +7,7 @@
 
 (defn user-auth-url
   "Take an options map and return the URL where the user can authorize the app."
-  [{:keys [shop app redirect]}]
+  [app shop & {:keys [redirect]}]
   (str  "https://" shop "/admin/oauth/authorize"
         "?client_id=" (app :key)
         "&scope=" (->> (app :scope) (map name) (str/join ","))
@@ -15,8 +15,9 @@
 
 (defn verify-params
   "Uses your shared secret to verify that a signed map of query params is from Shopify."
-  [secret params]
-  (let [signature (params :signature)
+  [app params]
+  (let [secret (app :secret)
+        signature (params :signature)
         params (dissoc params :signature)
         join-keypair (comp (partial str/join "=") (partial map name))
         sorted-param-string (->> params (map join-keypair) sort (str/join))]
@@ -26,7 +27,7 @@
 
 (defn build-access-token-request
   "Take an options map and return a request map for a POST to Shopify to get a permanent token"
-  [{:keys [shop app code]}]
+  [app shop code]
   { :method :post
     :url (str "https://" shop "/admin/oauth/access_token")
     :accept :json
