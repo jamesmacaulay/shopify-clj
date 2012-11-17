@@ -2,6 +2,10 @@
 /lib
 /classes
 /checkouts
+shopify-*/target
+shopify-*/lib
+shopify-*/classes
+shopify-*/checkouts
 pom.xml
 *.jar
 *.class
