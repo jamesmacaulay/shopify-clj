@@ -11,7 +11,7 @@
   (str  "https://" shop "/admin/oauth/authorize"
         "?client_id=" (app :key)
         "&scope=" (->> (app :scope) (map name) (str/join ","))
-        (when redirect (str "&redirect_url=" redirect))))
+        (when redirect (str "&redirect_uri=" redirect))))
 
 (defn verify-params
   "Uses your shared secret to verify that a signed map of query params is from Shopify."
@@ -26,21 +26,23 @@
     ))
 
 (defn build-access-token-request
-  "Take an options map and return a request map for a POST to Shopify to get a permanent token"
+  "Takes an app map, a myshopify domain, and a temporary code.
+  Returns a request map for a POST to Shopify to get a permanent token"
   [app shop code]
   { :method :post
-    :url (str "https://" shop "/admin/oauth/access_token")
+    :url    (str "https://" shop "/admin/oauth/access_token")
     :accept :json
-    :as :json
+    :as     :json
     :form-params {
-      :client_id (app :key)
+      :client_id     (app :key)
       :client_secret (app :secret)
-      :code code}})
+      :code          code}})
 
 (defn fetch-access-token
-  "Takes an options map and fires off a blocking POST to Shopify which requests a permanent token."
-  [options]
-  (let [response (http-request (build-access-token-request options))]
+  "Takes an app map, a myshopify domain, and a temporary access code.
+  Fires off a blocking POST to Shopify which requests a permanent token."
+  [app shop code]
+  (let [response (http-request (build-access-token-request app shop code))]
     (get-in response [:body :access_token])))
 
 

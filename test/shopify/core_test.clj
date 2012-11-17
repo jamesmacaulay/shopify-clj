@@ -20,7 +20,7 @@
             "/admin/oauth/authorize"
             "?client_id=01abfc750a0c942167651c40d088531d"
             "&scope=read_orders,write_content"
-            "&redirect_url=http://shopify-test.heroku.com/landing-page")
+            "&redirect_uri=http://shopify-test.heroku.com/landing-page")
       (user-auth-url default-app "xerxes.myshopify.com"
         :redirect "http://shopify-test.heroku.com/landing-page"))))
   (testing "redirect param is optional"
@@ -34,8 +34,7 @@
 
 (deftest verify-params-test
   (testing "valid params"
-    (let [secret "dc2e817cb95adce7164db4767a13a53f"
-          params {
+    (let [params {
             :shop       "xerxes.myshopify.com"
             :code       "78415eb05dd9fc31283063c71952303c"
             :timestamp  "1349400031"
@@ -43,8 +42,7 @@
     (is (= true
       (verify-params default-app params)))))
   (testing "invalid params"
-    (let [secret "dc2e817cb95adce7164db4767a13a53f"
-          params {
+    (let [params {
             :shop       "another-shop.myshopify.com"
             :code       "78415eb05dd9fc31283063c71952303c"
             :timestamp  "1349400031"
