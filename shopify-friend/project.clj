@@ -1,6 +1,6 @@
 (defproject com.shopify/shopify-friend "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "A friend workflow to authenticate with a Shopify shop using OAuth2"
+  :url "https://github.com/jamesmacaulay/shopify-clj"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
