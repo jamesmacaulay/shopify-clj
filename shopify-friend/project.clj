@@ -1,4 +1,4 @@
-(defproject com.shopify/shopify-friend "0.1.0-SNAPSHOT"
+(defproject shopify/shopify-friend "0.1.0-SNAPSHOT"
   :description "A friend workflow to authenticate with a Shopify shop using OAuth2"
   :url "https://github.com/jamesmacaulay/shopify-clj"
   :license {:name "Eclipse Public License"

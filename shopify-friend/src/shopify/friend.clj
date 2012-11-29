@@ -40,6 +40,7 @@
         code (get-in request [:query-params "code"])
         access-token (fetch-access-token api-client shop code)]
     (with-meta {:identity access-token
+                :access-token access-token
                 :shop shop}
                {:type ::friend/auth
                 ::friend/workflow :oauth2
@@ -89,5 +90,3 @@
             
             (login-request? request)
             (handle-login-request api-client request callback-path)))))
-
-

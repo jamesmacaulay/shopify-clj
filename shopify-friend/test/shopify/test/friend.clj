@@ -10,14 +10,9 @@
    :secret "dc2e817cb95adce7164db4767a13a53f"
    :scope [:read_orders, :write_content]})
 
-(def default-connection
-  {:shop "xerxes.myshopify.com"
-   :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"})
-
 (defn mock-request
   [& args]
   ((wrap-params identity) (apply request args)))
-
 
 (deftest user-auth-url-test
   (testing "(user-auth-url options) returns a user auth url"
@@ -105,6 +100,7 @@
             (handle-callback-request default-api-client
                                      (mock-request :get request-url))]
         (is (= {:identity "mock-access-token"
+                :access-token "mock-access-token"
                 :shop "foo.myshopify.com"}
                response))))))
 
