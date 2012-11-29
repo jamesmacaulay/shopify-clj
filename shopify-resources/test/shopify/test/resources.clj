@@ -6,8 +6,8 @@
   {:shop "xerxes.myshopify.com"
    :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"})
 
-(deftest build-resource-request-test
-  (testing "(build-resource-request connection method resource-path params) builds the appropriate authenticated request")
+(deftest build-request-test
+  (testing "(build-request connection method resource-path params) builds the appropriate authenticated request")
     (let [connection default-connection
           method :get
           resource-path "products"
@@ -18,4 +18,4 @@
               :accept :json
               :as :json
               :query-params {:limit 2}}
-             (build-resource-request connection method resource-path params)))))
+             (build-request connection method resource-path params)))))
