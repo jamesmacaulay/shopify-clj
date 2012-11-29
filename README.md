@@ -27,6 +27,6 @@ Or if you just need one of the libraries, you can do that too:
 
 ## License
 
-Copyright © 2012 James MacAulay
+Copyright © 2012 Shopify
 
 Distributed under the Eclipse Public License, the same as Clojure.
