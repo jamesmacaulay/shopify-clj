@@ -43,7 +43,7 @@
                 :access-token access-token
                 :shop shop}
                {:type ::friend/auth
-                ::friend/workflow :oauth2
+                ::friend/workflow :shopify
                 ::friend/redirect-on-auth? true})))
 
 (defn handle-login-request
