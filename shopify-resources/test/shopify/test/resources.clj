@@ -2,7 +2,7 @@
   (:use clojure.test
         shopify.resources))
 
-(def default-connection
+(def default-session
   {:shop "xerxes.myshopify.com"
    :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"})
 
@@ -30,11 +30,11 @@
     (let [wrapped-identity (wrap-access-token identity)]
       (is (= {:shop "xerxes.myshopify.com"
               :headers {"x-shopify-access-token" "e5ea7fb51ff27a20c3f622df66b9acdc"}}
-             (wrapped-identity default-connection)))
+             (wrapped-identity default-session)))
       (is (= {:shop "xerxes.myshopify.com"
               :headers {"foo" "bar"
                         "x-shopify-access-token" "e5ea7fb51ff27a20c3f622df66b9acdc"}}
-             (wrapped-identity (-> default-connection
+             (wrapped-identity (-> default-session
                                    (assoc :headers {"foo" "bar"}))))))))
 
 (deftest wrap-shop-middleware-test
@@ -42,7 +42,7 @@
     (let [wrapped-identity (wrap-shop identity)]
       (is (= {:server-name "xerxes.myshopify.com"
               :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"}
-             (wrapped-identity default-connection))))))
+             (wrapped-identity default-session))))))
 
 (deftest wrap-ssl-middleware-test
   (testing "(wrap-ssl clj-http-client) wraps the client to default :scheme to :https"
@@ -50,11 +50,11 @@
       (is (= {:scheme :https
               :shop "xerxes.myshopify.com"
               :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"}
-             (wrapped-identity default-connection)))
+             (wrapped-identity default-session)))
       (is (= {:scheme :http
               :shop "xerxes.myshopify.com"
               :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"}
-             (wrapped-identity (assoc default-connection :scheme :http)))))))
+             (wrapped-identity (assoc default-session :scheme :http)))))))
 
 (deftest wrap-retry-throttled-middleware-test
   (let [throttled-response {:status 429 :headers {} :body ""}
@@ -109,7 +109,7 @@
                                              "x-shopify-shop-api-call-limit" "2/500"
                                              "connection" "close"}
                                    :body (byte-array (map byte [31, -117, 8, 0, 0, 0, 0, 0, 0, 3, -85, 86, 74, -50, 47, -51, 43, 81, -78, 50, -86, 5, 0, 106, 49, -10, -15, 11, 0, 0, 0]))}
-          request (-> default-connection
+          request (-> default-session
                       (assoc
                         :method :get
                         :uri "/admin/pages/count"))
