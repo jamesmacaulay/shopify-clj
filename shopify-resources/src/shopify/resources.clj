@@ -126,7 +126,7 @@
       ; clj-http.client/wrap-oauth
       ; clj-http.client/wrap-user-info
       ; clj-http.client/wrap-url
-      clj-http.client/wrap-redirects
+      ; clj-http.client/wrap-redirects
       clj-http.client/wrap-decompression
       clj-http.client/wrap-input-coercion
       ; put this before output-coercion, so additional charset
