@@ -64,7 +64,7 @@
               :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"}
              (wrapped-identity (assoc default-session :scheme :http)))))))
 
-(deftest wrap-retry-throttled-middleware-test
+(deftest wrap-retry-on-throttle-errors-middleware-test
   (let [throttled-response {:status 429 :headers {} :body ""}
         ok-response {:status 200 :headers {} :body ""}
         mock-responder (fn [failure-count]
@@ -75,23 +75,23 @@
                                (do
                                  (swap! counter dec)
                                  throttled-response)))))]
-    (testing "wrap-retry-throttled middleware doesn't do anything when :retry-on-throttle-errors is false"
-      (let [fail-once (wrap-retry-throttled (mock-responder 1))]
+    (testing "wrap-retry-on-throttle-errors middleware doesn't do anything when :retry-on-throttle-errors is false"
+      (let [fail-once (wrap-retry-on-throttle-errors (mock-responder 1))]
         (is (= throttled-response
                (fail-once {:throttle-retry-delay 0.1
                            :retry-on-throttle-errors false})))))
-    (testing "wrap-retry-throttled middleware doesn't retry on successful response"
-      (let [succeed (wrap-retry-throttled (constantly ok-response))]
+    (testing "wrap-retry-on-throttle-errors middleware doesn't retry on successful response"
+      (let [succeed (wrap-retry-on-throttle-errors (constantly ok-response))]
         (is (= ok-response
                (succeed {:throttle-retry-delay 0.1})))))
-    (testing "wrap-retry-throttled middleware tells you how many times it had to retry, if not zero"
-      (let [fail-twice (wrap-retry-throttled (mock-responder 2))]
+    (testing "wrap-retry-on-throttle-errors middleware tells you how many times it had to retry, if not zero"
+      (let [fail-twice (wrap-retry-on-throttle-errors (mock-responder 2))]
         (is (= (assoc ok-response
                  :throttle-retry-count 2)
                (fail-twice {:throttle-retry-delay 0.1
                             :max-throttle-retries 2})))))
-    (testing "wrap-retry-throttled middleware returns the last failed response if it hits the max number of retries"
-      (let [fail-5-times (wrap-retry-throttled (mock-responder 5))]
+    (testing "wrap-retry-on-throttle-errors middleware returns the last failed response if it hits the max number of retries"
+      (let [fail-5-times (wrap-retry-on-throttle-errors (mock-responder 5))]
         (is (= (assoc throttled-response
                  :throttle-retry-count 4)
                (fail-5-times {:throttle-retry-delay 0.1

@@ -84,7 +84,7 @@
                   (assoc :server-name shop)))
       (client req))))
 
-(defn wrap-retry-throttled
+(defn wrap-retry-on-throttle-errors
   "Middleware which retries a request if it's being throttled.
   
   Request options:
@@ -118,7 +118,7 @@
   [request]
   (-> request
       clj-http.client/wrap-request-timing
-      wrap-retry-throttled
+      wrap-retry-on-throttle-errors
       clj-http.client/wrap-lower-case-headers
       ; clj-http.client/wrap-query-params
       wrap-query-params
