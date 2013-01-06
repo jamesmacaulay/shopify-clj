@@ -1,10 +1,18 @@
 (ns shopify.test.resources
   (:use clojure.test
-        shopify.resources))
+        shopify.resources)
+  (:refer-clojure :exclude (get)))
 
 (def default-session
   {:shop "xerxes.myshopify.com"
    :access-token "e5ea7fb51ff27a20c3f622df66b9acdc"})
+
+(deftest params->query-string-test
+  (testing "(params->query-string params) produces a nested query string using square bracket syntax"
+    (is (= "asset[key]=templates%2Findex.liquid"
+           (params->query-string {:asset {:key "templates/index.liquid"}})))
+    (is (= "nest[num]=123&nest[all][]=this&nest[all][][silly]=stuff&nest[all][]=here"
+           (params->query-string {:nest {:all ["this" {:silly :stuff} "here"] :num 123}})))))
 
 (deftest wrap-json-format-middleware-test
   (testing "(wrap-json-format clj-http-client) wraps the client to set appropriate :accept and :as keys, and append .json format to paths"
@@ -112,7 +120,8 @@
           request (-> default-session
                       (assoc
                         :method :get
-                        :uri "/admin/pages/count"))
+                        :uri "/admin/pages/count"
+                        :query-params {:since_id 108828309}))
           wrapped-assertions (wrap-request
                                (fn [req]
                                  (is (= {:scheme :https
@@ -120,6 +129,7 @@
                                          :content-type :json
                                          :as :json
                                          :uri "/admin/pages/count.json"
+                                         :query-string "since_id=108828309"
                                          :server-name "xerxes.myshopify.com"
                                          :headers
                                          {"accept-encoding" "gzip, deflate"

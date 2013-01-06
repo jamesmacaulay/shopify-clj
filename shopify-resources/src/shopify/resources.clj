@@ -2,7 +2,47 @@
   (:require [clojure.string :as str]
             clj-http.core
             clj-http.client
-            clj-http.links))
+            clj-http.links
+            clj-http.util)
+  (:refer-clojure :exclude (get)))
+
+(defn params->query-string
+  "Builds Rails-style nested query strings from param maps"
+  [data & [prefix]]
+  (cond
+    (sequential? data)
+    (->> data
+         (map (fn [item]
+                (params->query-string
+                  item
+                  (str prefix "[]"))))
+         (str/join \&))
+    (map? data)
+    (->> data
+         (map (fn [[k v]]
+                (params->query-string
+                  v
+                  (let [k (clj-http.util/url-encode (name k))]
+                    (if prefix (str prefix \[ k \]) k)))))
+         (str/join \&))
+    data
+    (->> (if (keyword? data) (name data) (str data))
+         clj-http.util/url-encode
+         (str prefix (when prefix \=)))
+    :else
+    prefix))
+
+(defn wrap-query-params
+  "Middleware which converts a :query-params map into a Rails-style nested :query-string"
+  [client]
+  (fn [{:keys [query-params] :as req}]
+    (if query-params
+      (client (-> req
+                  (dissoc :query-params)
+                  (assoc
+                    :query-string
+                    (params->query-string query-params))))
+      (client req))))
 
 (defn wrap-json-format
   [client]
@@ -79,14 +119,12 @@
   (-> request
       clj-http.client/wrap-request-timing
       wrap-retry-throttled
-      
       clj-http.client/wrap-lower-case-headers
-      clj-http.client/wrap-query-params
+      ; clj-http.client/wrap-query-params
+      wrap-query-params
       ; clj-http.client/wrap-basic-auth
       ; clj-http.client/wrap-oauth
       ; clj-http.client/wrap-user-info
-      
-      
       ; clj-http.client/wrap-url
       clj-http.client/wrap-redirects
       clj-http.client/wrap-decompression
@@ -100,17 +138,15 @@
       clj-http.client/wrap-accept-encoding
       clj-http.client/wrap-content-type
       clj-http.client/wrap-form-params
-      clj-http.client/wrap-nested-params
+      ; clj-http.client/wrap-nested-params
       clj-http.client/wrap-method
       ; clj-http.cookies/wrap-cookies
       clj-http.links/wrap-links
       ; clj-http.client/wrap-unknown-host
-      
       wrap-json-format
       wrap-access-token
       wrap-shop
-      wrap-ssl
-      ))
+      wrap-ssl))
 
 (def request
   (wrap-request clj-http.core/request))
