@@ -143,3 +143,26 @@
              (:body response)))
       (is (= (:headers raw-page-count-response)
              (:headers response))))))
+
+(deftest singularize-test
+  (testing "(singularize resource) chops off a trailing \"s\""
+    (is (= :product (singularize :products))))
+  (testing "(singularize resource) leaves singulars alone"
+    (is (= :product (singularize :product))))
+  (testing "(singularize resource) does :countries"
+    (is (= :country (singularize :countries)))
+    (is (= :country (singularize :country))))
+  (testing "(singularize resource) always returns a keyword"
+    (is (= :foo (singularize "foos")))))
+
+(deftest pluralize-test
+  (testing "(pluralize resource) adds a trailing \"s\""
+    (is (= :products (pluralize :products))))
+  (testing "(pluralize resource) leaves plurals alone"
+    (is (= :products (pluralize :product))))
+  (testing "(pluralize resource) does :countries"
+    (is (= :countries (pluralize :country)))
+    (is (= :countries (pluralize :countries))))
+  (testing "(pluralize resource) always returns a keyword"
+    (is (= :foos (pluralize "foo")))))
+

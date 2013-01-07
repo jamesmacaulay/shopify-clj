@@ -186,3 +186,19 @@
               :method :delete
               :uri uri
               :query-params query-params))))
+
+(defn pluralize
+  "Converts resource keywords to their plural forms."
+  [resource]
+  (if (#{:country :countries} resource)
+    :countries
+    (keyword (str/replace-first (name resource) #"s?$" "s"))))
+
+(defn singularize
+  "Converts resource keywords to their singular forms."
+  [resource]
+  (if (#{:country :countries} resource)
+    :country
+    (keyword (str/replace-first (name resource) #"s?$" ""))))
+
+
