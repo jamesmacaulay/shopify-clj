@@ -151,3 +151,38 @@
 (def request
   (wrap-request clj-http.core/request))
 
+(defn get
+  ([session uri]
+   (request (assoc session
+              :method :get
+              :uri uri)))
+  ([session uri query-params]
+   (request (assoc session
+              :method :get
+              :uri uri
+              :query-params query-params))))
+
+(defn post
+  [session uri form-params]
+  (request (assoc session
+             :method :post
+             :uri uri
+             :form-params form-params)))
+
+(defn put
+  [session uri form-params]
+  (request (assoc session
+             :method :put
+             :uri uri
+             :form-params form-params)))
+
+(defn delete
+  ([session uri]
+   (request (assoc session
+              :method :delete
+              :uri uri)))
+  ([session uri query-params]
+   (request (assoc session
+              :method :delete
+              :uri uri
+              :query-params query-params))))
