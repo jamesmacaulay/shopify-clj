@@ -1,10 +1,16 @@
 (ns shopify.resources
   (:require [clojure.string :as str]
+            [clojure.set :as set]
             clj-http.core
             clj-http.client
             clj-http.links
-            clj-http.util)
-  (:refer-clojure :exclude (get)))
+            clj-http.util))
+
+(defn name-str
+  [x]
+  (if (keyword? x)
+    (name x)
+    (str x)))
 
 (defn params->query-string
   "Builds Rails-style nested query strings from param maps"
@@ -26,7 +32,7 @@
                     (if prefix (str prefix \[ k \]) k)))))
          (str/join \&))
     data
-    (->> (if (keyword? data) (name data) (str data))
+    (->> (name-str data)
          clj-http.util/url-encode
          (str prefix (when prefix \=)))
     :else
@@ -114,6 +120,22 @@
                 (Thread/sleep (* wait-seconds 1000))
                 (recur (+ 1 retries))))))))))
 
+(def ^:private query-string-methods
+  #{:get :head :delete})
+
+(defn wrap-generic-params-key
+  [client]
+  (fn [req]
+    (if-let [params (:params req)]
+      (if (query-string-methods (keyword (:request-method req)))
+        (client (-> req
+                    (dissoc :params)
+                    (assoc :query-params params)))
+        (client (-> req
+                    (dissoc :params)
+                    (assoc :form-params params))))
+      (client req))))
+
 (defn wrap-request
   [request]
   (-> request
@@ -139,6 +161,7 @@
       clj-http.client/wrap-content-type
       clj-http.client/wrap-form-params
       ; clj-http.client/wrap-nested-params
+      wrap-generic-params-key
       clj-http.client/wrap-method
       ; clj-http.cookies/wrap-cookies
       clj-http.links/wrap-links
@@ -151,54 +174,173 @@
 (def request
   (wrap-request clj-http.core/request))
 
-(defn get
-  ([session uri]
-   (request (assoc session
-              :method :get
-              :uri uri)))
-  ([session uri query-params]
-   (request (assoc session
-              :method :get
-              :uri uri
-              :query-params query-params))))
-
-(defn post
-  [session uri form-params]
-  (request (assoc session
-             :method :post
-             :uri uri
-             :form-params form-params)))
-
-(defn put
-  [session uri form-params]
-  (request (assoc session
-             :method :put
-             :uri uri
-             :form-params form-params)))
-
-(defn delete
-  ([session uri]
-   (request (assoc session
-              :method :delete
-              :uri uri)))
-  ([session uri query-params]
-   (request (assoc session
-              :method :delete
-              :uri uri
-              :query-params query-params))))
-
-(defn pluralize
-  "Converts resource keywords to their plural forms."
+(defn collection-name
+  "Converts resource keywords to their plural forms, unless they're singleton resources."
   [resource]
-  (if (#{:country :countries} resource)
-    :countries
-    (keyword (str/replace-first (name resource) #"s?$" "s"))))
+  (let [resource (name resource)]
+    (case resource
+      ("country" "countries") "countries"
+      ("shop" "shops") "shop"
+      (str/replace-first resource #"s?$" "s"))))
 
-(defn singularize
+(defn member-name
   "Converts resource keywords to their singular forms."
   [resource]
-  (if (#{:country :countries} resource)
-    :country
-    (keyword (str/replace-first (name resource) #"s?$" ""))))
+  (let [resource (name resource)]
+    (case resource
+      ("country" "countries") "country"
+      (str/replace-first resource #"s?$" ""))))
 
+(def path-params
+  ^{:doc "Takes a route template like \"/admin/blogs/:blog_id/articles\" and returns a set of dynamic segments as keywords like #{:blog_id}"}
+  (memoize (fn path-params [route]
+             (->> (re-seq #"(?<=:)\w+" route)
+                  (map keyword)
+                  set))))
+
+(defn pick-route
+  "Pick the first satisfyable route template in a collection, given a collection of available keys"
+  [routes available-keys]
+  (->> routes
+       (some #(let [unfilled-segments
+                    (set/difference (path-params %)
+                                    (set available-keys))]
+                (when (empty? unfilled-segments) %)))))
+
+
+(defn render-route
+  "Given a route template and a map of params, return a partial request map"
+  [route params]
+  (let [dynamic-segments (path-params route)
+        reducer (fn [req [k v :as param]]
+                  (if (dynamic-segments k)
+                    (assoc req
+                      :uri (str/replace-first
+                             (:uri req)
+                             (re-pattern (str k "(?=$|\\/)"))
+                             (clj-http.util/url-encode (name-str v))))
+                    (assoc-in req [:params k] v)))]
+    (reduce reducer
+            {:uri route}
+            params)))
+
+
+(defn- collection-route
+  ([resource]
+    (collection-route resource "/admin"))
+  ([resource prefix]
+    (str prefix \/ (collection-name resource))))
+
+(defn- collection-action-route
+  ([resource]
+    (collection-action-route resource "/admin"))
+  ([resource prefix]
+    (str (collection-route resource prefix) "/:action")))
+
+(defn- member-route
+  ([resource]
+    (member-route resource "/admin"))
+  ([resource prefix]
+    (str (collection-route resource prefix) "/:id")))
+
+(defn- member-action-route
+  ([resource]
+    (member-action-route resource "/admin"))
+  ([resource prefix]
+    (str (collection-route resource prefix) "/:id/:action")))
+
+(defn- prefixed-collection-routes
+  [resource prefix]
+  (list (collection-action-route resource prefix)
+        (collection-route resource prefix)))
+
+(defn- prefixed-member-routes
+  [resource prefix]
+  (list (member-action-route resource prefix)
+        (member-route resource prefix)))
+
+(defn- shallow-collection-routes
+  [resource]
+  (prefixed-collection-routes resource "/admin"))
+
+(defn- shallow-member-routes
+  [resource]
+  (prefixed-member-routes resource "/admin"))
+
+(defn- prefixed-and-shallow-collection-routes
+  [resource prefix]
+  (concat (prefixed-collection-routes resource prefix)
+          (shallow-collection-routes resource)))
+
+(defn- prefixed-and-shallow-member-routes
+  [resource prefix]
+  (concat (prefixed-member-routes resource prefix)
+          (shallow-member-routes resource)))
+
+(defn- prefixed-and-shallow-routes
+  [resource prefix]
+  {:collection (prefixed-and-shallow-collection-routes resource prefix)
+   :member (prefixed-and-shallow-member-routes resource prefix)})
+
+(def resource-types
+  {:articles
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :articles "/admin/blogs/:blog_id")}}
+   :assets
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :assets "/admin/themes/:theme_id")
+     :member (prefixed-and-shallow-collection-routes
+               :assets "/admin/themes/:theme_id")}}
+   :customers
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :customers "/admin/customer_groups/:customer_group_id")}}
+   :events
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :events "/admin/:resource/:resource_id")}}
+   :fulfillments
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :fulfillments "/admin/orders/:order_id")}}
+   :metafields
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :metafields "/admin/:resource/:resource_id")}}
+   :product_images
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :product_images "/admin/products/:product_id")}}
+   :product_variants
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :product_variants "/admin/products/:product_id")}}
+   :provinces
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :provinces "/admin/countries/:country_id")}}
+   :shop
+   {:routes
+    {:collection (shallow-collection-routes :shop)
+     :member (shallow-collection-routes :shop)}}
+   :transactions
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :transactions "/admin/orders/:order_id")}}})
+
+(defn routes-for-resource
+  "Takes a resource-type (e.g. :products) and cardinality (:member or :collection) and returns a sequence of routes."
+  [resource-type cardinality]
+  (or (get-in resource-types [resource-type :routes cardinality])
+      (if (= :member cardinality)
+        (shallow-member-routes resource-type)
+        (shallow-collection-routes resource-type))))
+
+(defn endpoint
+  [resource-type cardinality params]
+  (-> (routes-for-resource resource-type cardinality)
+      (pick-route (keys params))
+      (render-route params)))
 

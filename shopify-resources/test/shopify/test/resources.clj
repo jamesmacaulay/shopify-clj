@@ -1,7 +1,6 @@
 (ns shopify.test.resources
   (:use clojure.test
-        shopify.resources)
-  (:refer-clojure :exclude (get)))
+        shopify.resources))
 
 (def default-session
   {:shop "xerxes.myshopify.com"
@@ -97,6 +96,18 @@
                (fail-5-times {:throttle-retry-delay 0.1
                               :max-throttle-retries 4})))))))
 
+(deftest wrap-generic-params-key-test
+  (testing "wrap-generic-params-key is middleware which converts a :params key to either :query-params or :form-params depending on request method"
+    (let [wrapped-identity (wrap-generic-params-key identity)]
+      (is (= {:request-method :get
+              :query-params {:foo "bar"}}
+             (wrapped-identity {:request-method :get
+                                :params {:foo "bar"}})))
+      (is (= {:request-method :post
+              :form-params {:foo "bar"}}
+             (wrapped-identity {:request-method :post
+                                :params {:foo "bar"}}))))))
+
 (deftest wrap-all-middleware-test
   (testing "(wrap-request clj-http-client) wraps the client fn in the appropriate middleware for Shopify resource requests, transforming the requests and responses correctly"
     (let [raw-page-count-response {:status 200
@@ -121,7 +132,7 @@
                       (assoc
                         :method :get
                         :uri "/admin/pages/count"
-                        :query-params {:since_id 108828309}))
+                        :params {:since_id 108828309}))
           wrapped-assertions (wrap-request
                                (fn [req]
                                  (is (= {:scheme :https
@@ -144,25 +155,96 @@
       (is (= (:headers raw-page-count-response)
              (:headers response))))))
 
-(deftest singularize-test
-  (testing "(singularize resource) chops off a trailing \"s\""
-    (is (= :product (singularize :products))))
-  (testing "(singularize resource) leaves singulars alone"
-    (is (= :product (singularize :product))))
-  (testing "(singularize resource) does :countries"
-    (is (= :country (singularize :countries)))
-    (is (= :country (singularize :country))))
-  (testing "(singularize resource) always returns a keyword"
-    (is (= :foo (singularize "foos")))))
+(deftest member-name-test
+  (testing "(member-name resource) chops off a trailing \"s\""
+    (is (= "product" (member-name :products))))
+  (testing "(member-name resource) leaves singulars alone"
+    (is (= "product" (member-name :product))))
+  (testing "(member-name resource) does :countries"
+    (is (= "country" (member-name :countries)))
+    (is (= "country" (member-name :country)))))
 
-(deftest pluralize-test
-  (testing "(pluralize resource) adds a trailing \"s\""
-    (is (= :products (pluralize :products))))
-  (testing "(pluralize resource) leaves plurals alone"
-    (is (= :products (pluralize :product))))
-  (testing "(pluralize resource) does :countries"
-    (is (= :countries (pluralize :country)))
-    (is (= :countries (pluralize :countries))))
-  (testing "(pluralize resource) always returns a keyword"
-    (is (= :foos (pluralize "foo")))))
+(deftest collection-name-test
+  (testing "(collection-name resource) adds a trailing \"s\""
+    (is (= "products" (collection-name :products))))
+  (testing "(collection-name resource) leaves plurals alone"
+    (is (= "products" (collection-name :product))))
+  (testing "(collection-name resource) does :countries"
+    (is (= "countries" (collection-name :country)))
+    (is (= "countries" (collection-name :countries)))))
 
+(deftest path-params-test
+  (testing "path-params takes a route template string and returns a set of keywords corresponding to its colon-prefixed dynamic segments"
+    (is (= #{:owner_resource :owner_id}
+           (path-params "/admin/:owner_resource/:owner_id/metafields")))))
+
+
+(deftest pick-route-test
+  (testing "(pick-route routes available-keys) returns the first satisfyable route template in routes, given the available keys"
+    (is (= "/admin/blogs/:blog_id/articles/:id"
+           (pick-route ["/admin/blogs/:blog_id/articles/:id"
+                        "/admin/articles/:id"
+                        "/admin/articles"]
+                       #{:blog_id :id :foo})))
+    (is (= "/admin/articles/:id"
+           (pick-route ["/admin/blogs/:blog_id/articles/:id"
+                        "/admin/articles/:id"
+                        "/admin/articles"]
+                       #{:id :foo})))
+    (is (= "/admin/articles"
+           (pick-route ["/admin/articles"
+                        "/admin/blogs/:blog_id/articles/:id"
+                        "/admin/articles/:id"]
+                       #{:foo})))))
+
+
+(deftest render-route-test
+  (testing "render-route takes a route template and some params and returns a partial request map"
+    (is (= {:uri "/admin/blogs/1/articles/2"}
+           (render-route "/admin/blogs/:blog_id/articles/:id"
+                       {:blog_id 1
+                        :id 2})))
+    (is (= {:uri "/admin/blogs/1/articles/2"
+            :params {:article [:body_html "<p>foo</p>"]}}
+           (render-route "/admin/blogs/:blog_id/articles/:id"
+                       {:blog_id 1
+                        :id 2
+                        :article [:body_html "<p>foo</p>"]})))))
+
+
+(deftest routes-for-resource-test
+  (testing "(routes-for-resource :future_resources :collection) returns the default shallow collection routes"
+    (is (= ["/admin/future_resources/:action"
+            "/admin/future_resources"]
+           (routes-for-resource :future_resources :collection))))
+  (testing "(routes-for-resource :future_resources :member) returns the default shallow member routes"
+    (is (= ["/admin/future_resources/:id/:action"
+            "/admin/future_resources/:id"]
+           (routes-for-resource :future_resources :member))))
+  (testing "(routes-for-resource :metafields :collection) returns collection routes for metafields"
+    (is (= ["/admin/:resource/:resource_id/metafields/:action"
+            "/admin/:resource/:resource_id/metafields"
+            "/admin/metafields/:action"
+            "/admin/metafields"]
+           (routes-for-resource :metafields :collection))))
+  (testing "(routes-for-resource :metafields :member) returns member routes for metafields"
+    (is (= ["/admin/metafields/:id/:action"
+            "/admin/metafields/:id"]
+           (routes-for-resource :metafields :member))))
+  (testing "(routes-for-resource :shop :collection) returns the shop routes"
+    (is (= ["/admin/shop/:action"
+            "/admin/shop"]
+           (routes-for-resource :shop :collection))))
+  (testing "(routes-for-resource :shop :member) returns the shop routes"
+    (is (= ["/admin/shop/:action"
+            "/admin/shop"]
+           (routes-for-resource :shop :member)))))
+
+(deftest endpoint-test
+  (testing "(endpoint :orders :collection {:since_id 99}) returns the endpoint with those params"
+    (is (= {:uri "/admin/orders"
+            :params {:since_id 99}}
+           (endpoint :orders :collection {:since_id 99}))))
+  (testing "(endpoint :orders :member {:id 101}) returns the endpoint for the order with that id"
+    (is (= {:uri "/admin/orders/101"}
+           (endpoint :orders :member {:id 101})))))
