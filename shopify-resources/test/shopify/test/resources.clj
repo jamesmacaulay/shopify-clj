@@ -205,11 +205,11 @@
                        {:blog_id 1
                         :id 2})))
     (is (= {:uri "/admin/blogs/1/articles/2"
-            :params {:article [:body_html "<p>foo</p>"]}}
+            :params {:article {:body_html "<p>foo</p>"}}}
            (render-route "/admin/blogs/:blog_id/articles/:id"
                        {:blog_id 1
                         :id 2
-                        :article [:body_html "<p>foo</p>"]})))))
+                        :article {:body_html "<p>foo</p>"}})))))
 
 
 (deftest routes-for-resource-test
