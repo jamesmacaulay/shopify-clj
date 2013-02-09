@@ -248,3 +248,36 @@
   (testing "(endpoint :orders :member {:id 101}) returns the endpoint for the order with that id"
     (is (= {:uri "/admin/orders/101"}
            (endpoint :orders :member {:id 101})))))
+
+(deftest partition-keys-test
+  (testing "partition-keys takes a map and a predicate which is applied to the keys to split the map in two"
+    (is (= [{:a 1 :c 3}
+            {:b 2}]
+           (partition-keys {:a 1 :b 2 :c 3}
+                           #{:a :c})))))
+
+(deftest scope-keys-for-resource-test
+  (testing "(scope-keys-for-resource resource-type) returns the set of all keys which are used as dynamic segments in the resource's routes"
+    (is (= #{:action :id}
+           (scope-keys-for-resource :pages)))
+    (is (= #{:action :blog_id :id}
+           (scope-keys-for-resource :articles)))
+    (is (= #{:action :resource :resource_id :id}
+           (scope-keys-for-resource :metafields)))))
+
+(deftest extract-scope-params-test
+  (testing "(extract-scope-params resource-type member-attrs) returns a map of scope params and a map of the remaining attributes"
+    (is (= [{:blog_id 99}
+            {:title "foo" :body_html "bar"}]
+           (extract-scope-params :articles {:blog_id 99
+                                            :title "foo"
+                                            :body_html "bar"}))))
+  (testing "extract-scope-params knows how to map special attributes"
+    (is (= [{:id 101 :resource "products" :resource_id 99}
+            {:value "foo"}]
+           (extract-scope-params :metafields {:owner_resource "product"
+                                              :owner_id 99
+                                              :id 101
+                                              :value "foo"})))))
+
+

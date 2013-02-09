@@ -344,3 +344,47 @@
       (pick-route (keys params))
       (render-route params)))
 
+(def scope-keys-for-resource
+  (memoize (fn scope-keys-for-resource
+             [resource-type]
+             (let [routes (mapcat (partial routes-for-resource resource-type)
+                                  [:collection :member])]
+               (into #{} (mapcat path-params routes))))))
+
+(defn transform-parent-resource-attrs
+  [attrs]
+  (let [renamed-attrs (set/rename-keys attrs {:owner_resource :resource
+                                              :owner_id :resource_id})
+        resource (:resource renamed-attrs)]
+    (if (string? resource)
+      (assoc renamed-attrs :resource (collection-name resource))
+      renamed-attrs)))
+
+(defmulti attrs-as-scope-params
+  (fn [resource-type attrs] resource-type))
+
+(defmethod attrs-as-scope-params :events
+  [_ attrs] (transform-parent-resource-attrs attrs))
+
+(defmethod attrs-as-scope-params :metafields
+  [_ attrs] (transform-parent-resource-attrs attrs))
+
+(defmethod attrs-as-scope-params :default
+  [_ attrs]
+  attrs)
+
+(defn partition-keys
+  "Takes a map and a predicate and returns two maps split by which keys satisfy the predicate"
+  [m pred]
+  (reduce (fn [result [k v]]
+            (let [i (if (pred k) 0 1)]
+              (assoc-in result [i k] v)))
+          [{} {}]
+          m))
+
+(defn extract-scope-params
+  "Takes a resource type-keyword and a map of member attributes, and returns a map of scope params and a map of the remaining attributes"
+  [resource-type member-attrs]
+    (partition-keys (attrs-as-scope-params resource-type member-attrs)
+                    (scope-keys-for-resource resource-type)))
+
