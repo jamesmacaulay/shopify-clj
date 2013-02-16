@@ -1,6 +1,6 @@
 (ns shopify.test.resources
   (:use clojure.test
-        shopify.resources))
+        [shopify.resources :as shop :exclude [comment]]))
 
 (def default-session
   {:shop "xerxes.myshopify.com"
@@ -443,3 +443,19 @@
            (save-request :pages
                          {:title "About us"
                           :body_html "We make nice things"})))))
+
+(deftest build-test
+  (testing "(build resource-type attrs) puts the type under :shopify.resources/type"
+    (is (= {:shopify.resources/type :page
+            :id 99}
+           (build :page {:id 99})))))
+
+(deftest builders-test
+  (testing "(page attrs) builds a page"
+    (is (= {:shopify.resources/type :page
+            :id 99}
+           (page {:id 99}))))
+  (testing "(comment attrs) builds a metafield"
+    (is (= {:shopify.resources/type :comment
+            :id 99}
+           (shop/comment {:id 99})))))

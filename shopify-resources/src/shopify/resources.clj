@@ -1,4 +1,5 @@
 (ns shopify.resources
+  (:refer-clojure :exclude [comment])
   (:require [clojure.string :as str]
             [clojure.set :as set]
             clj-http.core
@@ -465,3 +466,18 @@
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (endpoint resource-type :member params)
       :method :delete)))
+
+
+(defn build
+  [resource-type attrs]
+  (assoc attrs
+    ::type (-> resource-type member-name keyword)))
+
+(defmacro defbuilders
+  [& resources]
+  (list* 'do
+         (for [resource-type resources]
+           `(def ~(symbol (name resource-type))
+              (partial build ~(keyword resource-type))))))
+
+(defbuilders article asset blog checkout collect comment country custom-collection customer customer-group event fulfillment metafield order page product product-image product-variant product-search-engine province redirect script-tag shop smart-collection theme transactions webhook)
