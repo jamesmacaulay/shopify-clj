@@ -200,12 +200,15 @@
 
 (defn pick-route
   "Pick the first satisfyable route template in a collection, given a collection of available keys"
-  [routes available-keys]
-  (->> routes
-       (some #(let [unfilled-segments
-                    (set/difference (path-params %)
-                                    (set available-keys))]
-                (when (empty? unfilled-segments) %)))))
+  [routes params]
+  (let [available-keys (->> params
+                            (filter #(not (nil? (val %))))
+                            (map first)
+                            set)]
+    (some #(let [unfilled-segments (set/difference (path-params %)
+                                                   (set available-keys))]
+             (when (empty? unfilled-segments) %))
+          routes)))
 
 
 (defn render-route
@@ -298,17 +301,15 @@
     {:collection (prefixed-and-shallow-collection-routes
                    :customers "/admin/customer_groups/:customer_group_id")}}
    :events
-   {:routes
-    {:collection (prefixed-and-shallow-collection-routes
-                   :events "/admin/:resource/:resource_id")}}
+   {:routes (prefixed-and-shallow-routes
+              :events "/admin/:resource/:resource_id")}
    :fulfillments
    {:routes
     {:collection (prefixed-collection-routes
                    :fulfillments "/admin/orders/:order_id")}}
    :metafields
-   {:routes
-    {:collection (prefixed-and-shallow-collection-routes
-                   :metafields "/admin/:resource/:resource_id")}}
+   {:routes (prefixed-and-shallow-routes
+              :metafields "/admin/:resource/:resource_id")}
    :product_images
    {:routes
     {:collection (prefixed-collection-routes
@@ -341,7 +342,7 @@
 (defn endpoint
   [resource-type cardinality params]
   (-> (routes-for-resource resource-type cardinality)
-      (pick-route (keys params))
+      (pick-route params)
       (render-route params)))
 
 (def scope-keys-for-resource
@@ -385,6 +386,82 @@
 (defn extract-scope-params
   "Takes a resource type-keyword and a map of member attributes, and returns a map of scope params and a map of the remaining attributes"
   [resource-type member-attrs]
-    (partition-keys (attrs-as-scope-params resource-type member-attrs)
-                    (scope-keys-for-resource resource-type)))
+  (partition-keys (attrs-as-scope-params resource-type member-attrs)
+                  (scope-keys-for-resource resource-type)))
 
+(defn attrs-to-params
+  [resource-type attrs]
+  (let [[scope-params attrs] (extract-scope-params resource-type attrs)
+        root-key (-> resource-type member-name keyword)]
+    (if (empty? attrs)
+      scope-params
+      (assoc scope-params root-key attrs))))
+
+(defmulti create-request
+  (fn [resource-type attrs] resource-type))
+(declare update-request)
+(defmethod create-request :assets
+  [_ attrs]
+  (update-request :assets attrs))
+(defmethod create-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (endpoint resource-type :collection params)
+      :method :post)))
+
+(defmulti get-collection-request
+  (fn [resource-type params] resource-type))
+(defmethod get-collection-request :default
+  [resource-type params]
+  (assoc (endpoint resource-type :collection params)
+    :method :get))
+
+(defmulti get-member-request
+  (fn [resource-type attrs] resource-type))
+(defn default-get-member-request
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (endpoint resource-type :member params)
+      :method :get)))
+(defmethod get-member-request :assets
+  [_ attrs]
+  (let [pk-keys (if (nil? (:theme_id attrs))
+                  #{:key}
+                  #{:theme_id :key})]
+    (default-get-member-request :assets (select-keys attrs pk-keys))))
+(defmethod get-member-request :default
+  [resource-type attrs]
+  (default-get-member-request resource-type attrs))
+
+(defmulti update-request
+  (fn [resource-type attrs] resource-type))
+(defmethod update-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (endpoint resource-type :member params)
+      :method :put)))
+
+(defmulti persisted?
+  (fn [resource-type attrs] resource-type))
+(defmethod persisted? :assets
+  [resource-type attrs]
+  (contains? attrs :key))
+(defmethod persisted? :default
+  [resource-type attrs]
+  (contains? attrs :id))
+
+(defmulti save-request
+  (fn [resource-type attrs] resource-type))
+(defmethod save-request :default
+  [resource-type attrs]
+  (if (persisted? resource-type attrs)
+    (update-request resource-type attrs)
+    (create-request resource-type attrs)))
+
+(defmulti delete-request
+  (fn [resource-type attrs] resource-type))
+(defmethod delete-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (endpoint resource-type :member params)
+      :method :delete)))
