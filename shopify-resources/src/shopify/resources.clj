@@ -467,6 +467,9 @@
     (assoc (endpoint resource-type :member params)
       :method :delete)))
 
+(defn count-request
+  [resource-type params]
+  (get-collection-request resource-type (assoc params :action :count)))
 
 (defn build
   [resource-type attrs]
