@@ -183,6 +183,7 @@
       ("country" "countries") "countries"
       ("shop" "shops") "shop"
       (str/replace-first resource #"s?$" "s"))))
+(def collection-keyword (comp keyword collection-name))
 
 (defn member-name
   "Converts resource keywords to their singular forms."
@@ -191,6 +192,7 @@
     (case resource
       ("country" "countries") "country"
       (str/replace-first resource #"s?$" ""))))
+(def member-keyword (comp keyword member-name))
 
 (def path-params
   ^{:doc "Takes a route template like \"/admin/blogs/:blog_id/articles\" and returns a set of dynamic segments as keywords like #{:blog_id}"}
@@ -393,7 +395,7 @@
 (defn attrs-to-params
   [resource-type attrs]
   (let [[scope-params attrs] (extract-scope-params resource-type attrs)
-        root-key (-> resource-type member-name keyword)]
+        root-key (member-keyword resource-type)]
     (if (empty? attrs)
       scope-params
       (assoc scope-params root-key attrs))))
@@ -467,6 +469,63 @@
     (assoc (endpoint resource-type :member params)
       :method :delete)))
 
-(defn count-request
+(defn get-count-request
   [resource-type params]
   (get-collection-request resource-type (assoc params :action :count)))
+
+(defn extract-collection
+  [response resource-type]
+  (get-in response [:body (collection-keyword resource-type)]))
+
+(defn extract-member
+  [response resource-type]
+  (get-in response [:body (member-keyword resource-type)]))
+
+(defn create!
+  [session resource-type & [attrs]]
+  (-> (create-request resource-type (or attrs {}))
+      (merge session)
+      request
+      (extract-member resource-type)))
+
+(defn get-collection
+  [session resource-type & [params]]
+  (-> (get-collection-request resource-type (or params {}))
+      (merge session)
+      request
+      (extract-collection resource-type)))
+
+(defn get-member
+  [session resource-type & [attrs]]
+  (-> (get-member-request resource-type (or attrs {}))
+      (merge session)
+      request
+      (extract-member resource-type)))
+
+(defn get-count
+  [session resource-type & [params]]
+  (-> (get-count-request resource-type (or params {}))
+      (merge session)
+      request
+      (extract-member :count)))
+
+(defn update!
+  [session resource-type & [attrs]]
+  (-> (update-request resource-type (or attrs {}))
+      (merge session)
+      request
+      (extract-member resource-type)))
+
+(defn save!
+  [session resource-type & [attrs]]
+  (-> (save-request resource-type (or attrs {}))
+      (merge session)
+      request
+      (extract-member resource-type)))
+
+(defn delete!
+  [session resource-type & [attrs]]
+  (-> (delete-request resource-type (or attrs {}))
+      (merge session)
+      request
+      (extract-member resource-type)))

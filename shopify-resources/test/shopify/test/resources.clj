@@ -444,9 +444,9 @@
                          {:title "About us"
                           :body_html "We make nice things"})))))
 
-(deftest count-request-test
-  (testing "(count-request resource-type params) returns a partial request map"
+(deftest get-count-request-test
+  (testing "(get-count-request resource-type params) returns a partial request map"
     (is (= {:method :get
             :uri "/admin/pages/count"
             :params {:since_id 99}}
-           (count-request :pages {:since_id 99})))))
+           (get-count-request :pages {:since_id 99})))))
