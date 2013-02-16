@@ -450,19 +450,3 @@
             :uri "/admin/pages/count"
             :params {:since_id 99}}
            (count-request :pages {:since_id 99})))))
-
-(deftest build-test
-  (testing "(build resource-type attrs) puts the type under :shopify.resources/type"
-    (is (= {:shopify.resources/type :page
-            :id 99}
-           (build :page {:id 99})))))
-
-(deftest builders-test
-  (testing "(page attrs) builds a page"
-    (is (= {:shopify.resources/type :page
-            :id 99}
-           (page {:id 99}))))
-  (testing "(comment attrs) builds a metafield"
-    (is (= {:shopify.resources/type :comment
-            :id 99}
-           (shop/comment {:id 99})))))

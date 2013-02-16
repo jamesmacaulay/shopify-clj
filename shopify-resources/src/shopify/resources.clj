@@ -470,17 +470,3 @@
 (defn count-request
   [resource-type params]
   (get-collection-request resource-type (assoc params :action :count)))
-
-(defn build
-  [resource-type attrs]
-  (assoc attrs
-    ::type (-> resource-type member-name keyword)))
-
-(defmacro defbuilders
-  [& resources]
-  (list* 'do
-         (for [resource-type resources]
-           `(def ~(symbol (name resource-type))
-              (partial build ~(keyword resource-type))))))
-
-(defbuilders article asset blog checkout collect comment country custom-collection customer customer-group event fulfillment metafield order page product product-image product-variant product-search-engine province redirect script-tag shop smart-collection theme transactions webhook)
