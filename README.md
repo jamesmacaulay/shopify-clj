@@ -1,10 +1,10 @@
 # shopify-clj
 
-A set of libraries for interacting with the [Shopify][shopify] platform:
+A set of Clojure libraries for interacting with the [Shopify][shopify] platform:
 
 * `shopify-friend`: provides a [friend][friend] workflow to [authenticate with Shopify shops][auth-docs] using OAuth2.
 * `shopify-resources`: functions for interacting with [a shop's resources][resource-docs].
-* `shopify-core`: functions used by the other libraries, probably not very useful on its own.
+* `shopify-core`: functions used by the other libraries.
 
 [shopify]: http://www.shopify.com/
 [friend]: https://github.com/cemerick/friend
