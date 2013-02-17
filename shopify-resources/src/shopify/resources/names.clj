@@ -1,4 +1,5 @@
 (ns shopify.resources.names
+  "A few functions to help with resource type names."
   (:require [clojure.string :as str]))
 
 (defn collection-name

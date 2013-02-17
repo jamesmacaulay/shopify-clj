@@ -1,4 +1,5 @@
 (ns shopify.resources.client-middleware
+  "A custom middleware stack to make Shopify API requests with clj-http."
   (:use [shopify.util :only [name-str]])
   (:require [clojure.string :as str]
             clj-http.core

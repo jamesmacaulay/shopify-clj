@@ -1,4 +1,5 @@
 (ns shopify.friend
+  "Provides a workflow for [friend](https://github.com/cemerick/friend)."
   (:require [cemerick.friend :as friend]
             [clj-http.client :as client]))
 
@@ -20,9 +21,9 @@
    :url    (str "https://" shop "/admin/oauth/access_token")
    :accept :json
    :as     :json
-   :form-params {:client_id     (api-client :key)
+   :form-params {:client_id (api-client :key)
                  :client_secret (api-client :secret)
-                 :code          code}})
+                 :code code}})
 
 (defn fetch-access-token
   "Takes an api-client map, a myshopify domain, and a temporary access code.
@@ -70,15 +71,17 @@
 
 (defn workflow
   "Takes a config map and returns a friend workflow. The only required
-  config key is :api-client. Optional keys are :login-path (defaults to
-  \"/auth/shopify\") and :callback-path (defaults to
-  \"/auth/shopify/callback\"). Here's a typical config:
-  
-  {:api-client {:url \"http://myapp.com\"
-                :key \"01abfc750a0c942167651c40d088531d\"
-                :secret \"dc2e817cb95adce7164db4767a13a53f\"
-                :scope [:read_orders, :write_content]}
-   :login-path \"/login\"}"
+config key is `:api-client`. Optional keys are `:login-path` (defaults to
+\"/auth/shopify\") and `:callback-path` (defaults to
+\"/auth/shopify/callback\"). Here's a typical config:
+
+    {:api-client
+     {:url \"http://myapp.com\"
+      :key \"01abfc750a0c942167651c40d088531d\"
+      :secret \"dc2e817cb95adce7164db4767a13a53f\"
+      :scope [:read_orders, :write_content]}
+     :login-path \"/login\"}
+"
   [{:keys [api-client] :as config}]
   (let [callback-path (get config :callback-path "/auth/shopify/callback")
         login-path (get config :login-path "/auth/shopify")

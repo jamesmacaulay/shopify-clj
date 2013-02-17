@@ -1,4 +1,5 @@
 (ns shopify.resources
+  "Functions for making requests against a shop's authenticated API."
   (:refer-clojure :exclude [comment])
   (:use [shopify.resources.names :only [member-keyword
                                         collection-keyword]])
