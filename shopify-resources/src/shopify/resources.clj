@@ -1,18 +1,12 @@
 (ns shopify.resources
   (:refer-clojure :exclude [comment])
+  (:use [shopify.util :only [name-str partition-keys]])
   (:require [clojure.string :as str]
             [clojure.set :as set]
             clj-http.core
             clj-http.client
             clj-http.links
             clj-http.util))
-
-(defn name-str
-  "Returns the name of a keyword, or the string value of anything else."
-  [x]
-  (if (keyword? x)
-    (name x)
-    (str x)))
 
 (defn params->query-string
   "Builds Rails-style nested query strings from param maps."
@@ -372,15 +366,6 @@ In the response:
   [_ attrs] (transform-parent-resource-attrs attrs))
 (defmethod prepare-path-params :metafields
   [_ attrs] (transform-parent-resource-attrs attrs))
-
-(defn partition-keys
-  "Takes a map and a predicate and returns two maps split by which keys satisfy the predicate"
-  [m pred]
-  (reduce (fn [result [k v]]
-            (let [i (if (pred k) 0 1)]
-              (assoc-in result [i k] v)))
-          [{} {}]
-          m))
 
 (def path-param-keys-for-resource
   ^{:doc "Returns a set of all the "}
