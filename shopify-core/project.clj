@@ -4,4 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [digest "1.4.0"]])
+                 [digest "1.4.0"]]
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.4.0"]]}
+             :1.5 {:dependencies [[org.clojure/clojure "1.5.0-RC16"]]}}
+  :aliases {"all" ["with-profile" "dev:dev,1.5"]})

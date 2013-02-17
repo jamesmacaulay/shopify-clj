@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="Functions for interacting with a shop's resources" name="description" /><style type="text/css">/**
+<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="A set of libraries for interacting with the Shopify platform" name="description" /><style type="text/css">/**
  * SyntaxHighlighter
  * http://alexgorbatchev.com/SyntaxHighlighter
  *
@@ -3028,8 +3028,101 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>shopify/shopify-resources -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">shopify/shopify-resources</h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>Functions for interacting with a shop's resources</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">clj-http</td><td class="dotted"><hr /></td><td class="dep-version">0.6.3</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#shopify.resources">shopify.resources</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources" name="shopify.resources"><h1 class="project-name">shopify.resources</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</script><title>shopify -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">shopify</h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>A set of libraries for interacting with the Shopify platform</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">shopify/shopify-core</td><td class="dotted"><hr /></td><td class="dep-version">0.1.0-SNAPSHOT</td></tr><tr><td class="dep-name">shopify/shopify-friend</td><td class="dotted"><hr /></td><td class="dep-version">0.1.0-SNAPSHOT</td></tr><tr><td class="dep-name">shopify/shopify-resources</td><td class="dotted"><hr /></td><td class="dep-version">0.1.0-SNAPSHOT</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#shopify.auth">shopify.auth</a></li><li><a href="#shopify.util">shopify.util</a></li><li><a href="#shopify.friend">shopify.friend</a></li><li><a href="#shopify.resources">shopify.resources</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.auth" name="shopify.auth"><h1 class="project-name">shopify.auth</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.auth
+  (:require [clojure.string :as str]
+            digest))</pre></td></tr><tr><td class="docs"><p>Uses your shared secret to verify that a signed map of query params is from Shopify.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn verify-params
+  [app params]
+  (let [secret (:secret app)
+        signature (:signature params)
+        params (dissoc params :signature)
+        join-keypair (comp (partial str/join &quot;=&quot;) (partial map name))
+        sorted-param-string (-&gt;&gt; params (map join-keypair) sort (str/join))]
+    (= signature
+       (digest/md5 (str secret sorted-param-string)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.util" name="shopify.util"><h1 class="project-name">shopify.util</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.util)</pre></td></tr><tr><td class="docs"><p>Returns the name of a keyword, or the string value of anything else.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn name-str
+  [x]
+  (if (keyword? x)
+    (name x)
+    (str x)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.friend" name="shopify.friend"><h1 class="project-name">shopify.friend</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.friend
+  (:require [cemerick.friend :as friend]
+            [clj-http.client :as client]))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a shop domain, and a redirect path and returns
+  the URL where the user can grant access the api-client.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn user-auth-url
+  [api-client shop &amp; [redirect-path]]
+  (str &quot;https://&quot; shop &quot;/admin/oauth/authorize&quot;
+       &quot;?client_id=&quot; (api-client :key)
+       &quot;&amp;scope=&quot; (-&gt;&gt; (api-client :scope) (map name) (clojure.string/join &quot;,&quot;))
+       (when redirect-path
+         (str &quot;&amp;redirect_uri=&quot; (api-client :url) redirect-path))))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary code.
+  Returns a request map for a POST to Shopify to get a permanent token</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-access-token-request
+  [api-client shop code]
+  {:method :post
+   :url    (str &quot;https://&quot; shop &quot;/admin/oauth/access_token&quot;)
+   :accept :json
+   :as     :json
+   :form-params {:client_id     (api-client :key)
+                 :client_secret (api-client :secret)
+                 :code          code}})</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary access code.
+  Fires off a POST to Shopify requesting a permanent token, which is
+  then returned.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn fetch-access-token
+  [api-client shop code]
+  (let [response (client/request (build-access-token-request api-client shop code))]
+    (get-in response [:body :access_token])))</pre></td></tr><tr><td class="docs"><p>Uses the temporary code from an auth callback to fetch a permanent
+  access token from Shopify and return it in an auth map.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-callback-request
+  [api-client request]
+  (let [shop (get-in request [:query-params &quot;shop&quot;])
+        code (get-in request [:query-params &quot;code&quot;])
+        access-token (fetch-access-token api-client shop code)]
+    (with-meta {:identity access-token
+                :access-token access-token
+                :shop shop}
+               {:type ::friend/auth
+                ::friend/workflow :shopify
+                ::friend/redirect-on-auth? true})))</pre></td></tr><tr><td class="docs"><p>Returns a redirect response to the user auth URL for the shop
+  specified in the query params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-login-request
+  [api-client request callback-path]
+  (let [shop (get-in request [:query-params &quot;shop&quot;])]
+    (ring.util.response/redirect
+      (user-auth-url api-client shop callback-path))))</pre></td></tr><tr><td class="docs"><p>Returns whether or not the request is an auth callback, for a given
+  callback path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn callback-request-matcher
+  [callback-path request]
+  (and (= (request :uri) callback-path)
+       (contains? (request :query-params) &quot;code&quot;)
+       (contains? (request :query-params) &quot;shop&quot;)))</pre></td></tr><tr><td class="docs"><p>Returns whether or not the request is a login, for a given login path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn login-request-matcher
+  [login-path request]
+  (and (= (request :uri) login-path)
+       (contains? (request :query-params) &quot;shop&quot;)))</pre></td></tr><tr><td class="docs"><p>Takes a config map and returns a friend workflow. The only required
+  config key is :api-client. Optional keys are :login-path (defaults to
+  "/auth/shopify") and :callback-path (defaults to
+  "/auth/shopify/callback"). Here's a typical config:</p>
+
+<p>  {:api-client {:url "http://myapp.com"
+                :key "01abfc750a0c942167651c40d088531d"
+                :secret "dc2e817cb95adce7164db4767a13a53f"
+                :scope [:read<em>orders, :write</em>content]}
+   :login-path "/login"}</p>
+</td><td class="codes"><pre class="brush: clojure">(defn workflow
+  [{:keys [api-client] :as config}]
+  (let [callback-path (get config :callback-path &quot;/auth/shopify/callback&quot;)
+        login-path (get config :login-path &quot;/auth/shopify&quot;)
+        callback-request? (partial callback-request-matcher callback-path)
+        login-request? (partial login-request-matcher login-path)]
+    (fn [request]
+      (cond (callback-request? request)
+            (handle-callback-request api-client request)
+            (login-request? request)
+            (handle-login-request api-client request callback-path)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources" name="shopify.resources"><h1 class="project-name">shopify.resources</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns shopify.resources
   (:refer-clojure :exclude [comment])
   (:require [clojure.string :as str]
@@ -3037,7 +3130,7 @@ net.brehaut.ClojureTools = (function (SH) {
             clj-http.core
             clj-http.client
             clj-http.links
-            clj-http.util))</pre></td></tr><tr><td class="docs">
+            clj-http.util))</pre></td></tr><tr><td class="docs"><p>Returns the name of a keyword, or the string value of anything else.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn name-str
   [x]
   (if (keyword? x)
@@ -3485,7 +3578,5 @@ net.brehaut.ClojureTools = (function (SH) {
   (-&gt; (delete-request resource-type attrs)
       (merge session)
       request
-      (extract-member resource-type)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn page-seq-requests
-  [session resource-type &amp; [attrs]])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+      (extract-member resource-type)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>

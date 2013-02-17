@@ -6,4 +6,7 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [com.cemerick/friend "0.1.2"]
                  [clj-http "0.6.3"]]
-  :profiles {:dev {:dependencies [[ring-mock "0.1.3"]]}})
+  :profiles {:dev {:dependencies [[ring-mock "0.1.3"]
+                                  [org.clojure/clojure "1.4.0"]]}
+             :1.5 {:dependencies [[org.clojure/clojure "1.5.0-RC16"]]}}
+  :aliases {"all" ["with-profile" "dev:dev,1.5"]})
