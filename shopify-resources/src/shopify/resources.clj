@@ -8,6 +8,7 @@
             clj-http.util))
 
 (defn name-str
+  "Returns the name of a keyword, or the string value of anything else."
   [x]
   (if (keyword? x)
     (name x)
