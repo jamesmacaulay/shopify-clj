@@ -1,12 +1,12 @@
-(ns shopify.util.auth
+(ns shopify.auth
   (:require [clojure.string :as str]
             digest))
 
 (defn verify-params
   "Uses your shared secret to verify that a signed map of query params is from Shopify."
   [app params]
-  (let [secret (app :secret)
-        signature (params :signature)
+  (let [secret (:secret app)
+        signature (:signature params)
         params (dissoc params :signature)
         join-keypair (comp (partial str/join "=") (partial map name))
         sorted-param-string (->> params (map join-keypair) sort (str/join))]

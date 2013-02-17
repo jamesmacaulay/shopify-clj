@@ -1,4 +1,4 @@
-(ns shopify.test.friend
+(ns shopify.friend-test
   (:use clojure.test
         shopify.friend
         [ring.mock.request :only [request]]

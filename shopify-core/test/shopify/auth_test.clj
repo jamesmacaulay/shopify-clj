@@ -1,6 +1,6 @@
-(ns shopify.test.util.auth
+(ns shopify.auth-test
   (:use clojure.test
-        shopify.util.auth))
+        shopify.auth))
 
 (def default-api-client
   {:url "http://shopify-test.heroku.com"

@@ -1,4 +1,4 @@
-(ns shopify.test.resources
+(ns shopify.resources-test
   (:use clojure.test
         [shopify.resources :as shop :exclude [comment]]))
 
