@@ -1,228 +1,19 @@
 (ns shopify.resources
   (:refer-clojure :exclude [comment])
-  (:use [shopify.util :only [name-str partition-keys]])
-  (:require [clojure.string :as str]
-            [clojure.set :as set]
-            [shopify.resources.client-middleware :as middleware]
+  (:use [shopify.resources.names :only [member-keyword
+                                        collection-keyword]])
+  (:require [shopify.resources.client-middleware :as middleware]
+            [shopify.resources.routes :as routes]
             clj-http.util))
 
 (def request
   ^{:doc "Makes a request to the Shopify API."}
   middleware/request)
 
-(defn collection-name
-  "Converts resource keywords to their plural forms, unless it's a singleton resource (e.g. `:shop`)."
-  [resource]
-  (let [resource (name resource)]
-    (case resource
-      ("country" "countries") "countries"
-      ("shop" "shops") "shop"
-      (str/replace-first resource #"s?$" "s"))))
-
-(def collection-keyword (comp keyword collection-name))
-
-(defn member-name
-  "Converts resource keywords to their singular forms."
-  [resource]
-  (let [resource (name resource)]
-    (case resource
-      ("country" "countries") "country"
-      (str/replace-first resource #"s?$" ""))))
-
-(def member-keyword (comp keyword member-name))
-
-(def path-params
-  ^{:doc "Takes a route template like `\"/admin/blogs/:blog_id/articles\"` and returns a set of dynamic segments as keywords like `#{:blog_id}`."}
-  (memoize (fn path-params [route]
-             (->> (re-seq #"(?<=:)\w+" route)
-                  (map keyword)
-                  set))))
-
-(defn pick-route
-  "Pick the first satisfyable route template in a collection, given a collection of available keys."
-  [routes params]
-  (let [available-keys (->> params
-                            (filter #(not (nil? (val %))))
-                            (map first)
-                            set)]
-    (some #(let [unfilled-segments (set/difference (path-params %)
-                                                   (set available-keys))]
-             (when (empty? unfilled-segments) %))
-          routes)))
-
-
-(defn render-route
-  "Given a route template and a map of params, return a partial request map of `:uri` and `:params`."
-  [route params]
-  (let [dynamic-segments (path-params route)
-        reducer (fn [req [k v :as param]]
-                  (if (dynamic-segments k)
-                    (assoc req
-                      :uri (str/replace-first
-                             (:uri req)
-                             (re-pattern (str k "(?=$|\\/)"))
-                             (clj-http.util/url-encode (name-str v))))
-                    (assoc-in req [:params k] v)))]
-    (reduce reducer
-            {:uri route}
-            params)))
-
-
-(defn- collection-route
-  ([resource]
-    (collection-route resource "/admin"))
-  ([resource prefix]
-    (str prefix \/ (collection-name resource))))
-
-(defn- collection-action-route
-  ([resource]
-    (collection-action-route resource "/admin"))
-  ([resource prefix]
-    (str (collection-route resource prefix) "/:action")))
-
-(defn- member-route
-  ([resource]
-    (member-route resource "/admin"))
-  ([resource prefix]
-    (str (collection-route resource prefix) "/:id")))
-
-(defn- member-action-route
-  ([resource]
-    (member-action-route resource "/admin"))
-  ([resource prefix]
-    (str (collection-route resource prefix) "/:id/:action")))
-
-(defn- prefixed-collection-routes
-  [resource prefix]
-  (list (collection-action-route resource prefix)
-        (collection-route resource prefix)))
-
-(defn- prefixed-member-routes
-  [resource prefix]
-  (list (member-action-route resource prefix)
-        (member-route resource prefix)))
-
-(defn- shallow-collection-routes
-  [resource]
-  (prefixed-collection-routes resource "/admin"))
-
-(defn- shallow-member-routes
-  [resource]
-  (prefixed-member-routes resource "/admin"))
-
-(defn- prefixed-and-shallow-collection-routes
-  [resource prefix]
-  (concat (prefixed-collection-routes resource prefix)
-          (shallow-collection-routes resource)))
-
-(defn- prefixed-and-shallow-member-routes
-  [resource prefix]
-  (concat (prefixed-member-routes resource prefix)
-          (shallow-member-routes resource)))
-
-(defn- prefixed-and-shallow-routes
-  [resource prefix]
-  {:collection (prefixed-and-shallow-collection-routes resource prefix)
-   :member (prefixed-and-shallow-member-routes resource prefix)})
-
-(def resource-types
-  {:articles
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :articles "/admin/blogs/:blog_id")}}
-   :assets
-   {:routes
-    {:collection (prefixed-and-shallow-collection-routes
-                   :assets "/admin/themes/:theme_id")
-     :member (prefixed-and-shallow-collection-routes
-               :assets "/admin/themes/:theme_id")}}
-   :customers
-   {:routes
-    {:collection (prefixed-and-shallow-collection-routes
-                   :customers "/admin/customer_groups/:customer_group_id")}}
-   :events
-   {:routes (prefixed-and-shallow-routes
-              :events "/admin/:resource/:resource_id")}
-   :fulfillments
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :fulfillments "/admin/orders/:order_id")}}
-   :metafields
-   {:routes (prefixed-and-shallow-routes
-              :metafields "/admin/:resource/:resource_id")}
-   :product_images
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :product_images "/admin/products/:product_id")}}
-   :product_variants
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :product_variants "/admin/products/:product_id")}}
-   :provinces
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :provinces "/admin/countries/:country_id")}}
-   :shop
-   {:routes
-    {:collection (shallow-collection-routes :shop)
-     :member (shallow-collection-routes :shop)}}
-   :transactions
-   {:routes
-    {:collection (prefixed-collection-routes
-                   :transactions "/admin/orders/:order_id")}}})
-
-(defn routes-for-resource
-  "Takes a resource type keword (e.g. `:products`) and cardinality (`:member` or `:collection`) and returns a sequence of routes."
-  [resource-type cardinality]
-  (or (get-in resource-types [resource-type :routes cardinality])
-      (if (= :member cardinality)
-        (shallow-member-routes resource-type)
-        (shallow-collection-routes resource-type))))
-
-(defn endpoint
-  "Takes a resource type keword (e.g. `:products`), a cardinality (`:member` or `:collection`), and a map of params. Returns a partial request map of `:uri` and `:params`."
-  [resource-type cardinality params]
-  (-> (routes-for-resource resource-type cardinality)
-      (pick-route params)
-      (render-route params)))
-
-(defmulti prepare-path-params
-  "Takes a resource type keyword and a map of member attributes, and returns a possibly altered map suitable for extracting path params."
-  (fn [resource-type attrs] resource-type))
-(defmethod prepare-path-params :default
-  [_ attrs]
-  attrs)
-(defn transform-parent-resource-attrs
-  [attrs]
-  (let [renamed-attrs (set/rename-keys attrs {:owner_resource :resource
-                                              :owner_id :resource_id})
-        resource (:resource renamed-attrs)]
-    (if (string? resource)
-      (assoc renamed-attrs :resource (collection-name resource))
-      renamed-attrs)))
-(defmethod prepare-path-params :events
-  [_ attrs] (transform-parent-resource-attrs attrs))
-(defmethod prepare-path-params :metafields
-  [_ attrs] (transform-parent-resource-attrs attrs))
-
-(def path-param-keys-for-resource
-  ^{:doc "Returns a set of all the "}
-  (memoize (fn path-param-keys-for-resource
-             [resource-type]
-             (let [routes (mapcat (partial routes-for-resource resource-type)
-                                  [:collection :member])]
-               (into #{} (mapcat path-params routes))))))
-
-(defn extract-path-params
-  "Takes a resource type-keyword and a map of member attributes, and returns a map of path params and a map of the remaining attributes"
-  [resource-type member-attrs]
-  (partition-keys (prepare-path-params resource-type member-attrs)
-                  (path-param-keys-for-resource resource-type)))
-
 (defn attrs-to-params
   "Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. `{:id 99, :page {:title \"foo\"}}`."
   [resource-type attrs]
-  (let [[scope-params attrs] (extract-path-params resource-type attrs)
+  (let [[scope-params attrs] (routes/extract-path-params resource-type attrs)
         root-key (member-keyword resource-type)]
     (if (empty? attrs)
       scope-params
@@ -238,7 +29,7 @@
 (defmethod create-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
-    (assoc (endpoint resource-type :collection params)
+    (assoc (routes/endpoint resource-type :collection params)
       :method :post)))
 
 (defmulti get-collection-request
@@ -246,7 +37,7 @@
   (fn [resource-type params] resource-type))
 (defmethod get-collection-request :default
   [resource-type params]
-  (assoc (endpoint resource-type :collection params)
+  (assoc (routes/endpoint resource-type :collection params)
     :method :get))
 
 (defmulti get-member-request
@@ -255,7 +46,7 @@
 (defn default-get-member-request
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
-    (assoc (endpoint resource-type :member params)
+    (assoc (routes/endpoint resource-type :member params)
       :method :get)))
 (defmethod get-member-request :assets
   [_ attrs]
@@ -273,7 +64,7 @@
 (defmethod update-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
-    (assoc (endpoint resource-type :member params)
+    (assoc (routes/endpoint resource-type :member params)
       :method :put)))
 
 (defmulti persisted?
@@ -305,7 +96,7 @@
 (defmethod delete-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
-    (assoc (endpoint resource-type :member params)
+    (assoc (routes/endpoint resource-type :member params)
       :method :delete)))
 
 (defn get-count-request
