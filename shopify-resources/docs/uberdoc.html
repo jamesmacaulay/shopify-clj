@@ -3042,7 +3042,7 @@ net.brehaut.ClojureTools = (function (SH) {
   [x]
   (if (keyword? x)
     (name x)
-    (str x)))</pre></td></tr><tr><td class="docs"><p>Builds Rails-style nested query strings from param maps</p>
+    (str x)))</pre></td></tr><tr><td class="docs"><p>Builds Rails-style nested query strings from param maps.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn params-&gt;query-string
   [data &amp; [prefix]]
   (cond
@@ -3066,7 +3066,7 @@ net.brehaut.ClojureTools = (function (SH) {
          clj-http.util/url-encode
          (str prefix (when prefix \=)))
     :else
-    prefix))</pre></td></tr><tr><td class="docs"><p>Middleware which converts a :query-params map into a Rails-style nested :query-string</p>
+    prefix))</pre></td></tr><tr><td class="docs"><p>Middleware which converts a <code>:query-params</code> map into a Rails-style nested <code>:query-string</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-query-params
   [client]
   (fn [{:keys [query-params] :as req}]
@@ -3076,7 +3076,7 @@ net.brehaut.ClojureTools = (function (SH) {
                   (assoc
                     :query-string
                     (params-&gt;query-string query-params))))
-      (client req))))</pre></td></tr><tr><td class="docs">
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware which forces JSON for everything, and appends <code>.json</code> to paths if it isn't already there.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-json-format
   [client]
   (fn [req]
@@ -3086,7 +3086,7 @@ net.brehaut.ClojureTools = (function (SH) {
                 :content-type :json)]
       (if-let [uri (:uri req)]
         (client (assoc req :uri (str/replace uri #&quot;(?&lt;!\.json)$&quot; &quot;.json&quot;)))
-        (client req)))))</pre></td></tr><tr><td class="docs"><p>Middleware converting an :access-token option into the appropriate auth header</p>
+        (client req)))))</pre></td></tr><tr><td class="docs"><p>Middleware converting an <code>:access-token</code> option into the appropriate auth header.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-access-token
   [client]
   (fn [req]
@@ -3094,14 +3094,14 @@ net.brehaut.ClojureTools = (function (SH) {
       (client (-&gt; req
                   (dissoc :access-token)
                   (assoc-in [:headers &quot;x-shopify-access-token&quot;] token)))
-      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware defaulting requests to ssl</p>
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware defaulting requests to SSL.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-ssl
   [client]
   (fn [req]
     (if-let [scheme (:scheme req)]
       (client req)
       (client (-&gt; req
-                  (assoc :scheme :https))))))</pre></td></tr><tr><td class="docs"><p>Middleware converting a :shop option into :server-name</p>
+                  (assoc :scheme :https))))))</pre></td></tr><tr><td class="docs"><p>Middleware converting a <code>:shop</code> option into <code>:server-name</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-shop
   [client]
   (fn [req]
@@ -3111,15 +3111,19 @@ net.brehaut.ClojureTools = (function (SH) {
                   (assoc :server-name shop)))
       (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware which retries a request if it's being throttled.</p>
 
-<p>  Request options:</p>
+<p>Request options:</p>
 
-<p>  :retry-on-throttle-errors - default:true, whether to retry throttled requests
-  :throttle-retry-delay - default:60, how many seconds to wait between throttle retries
-  :max-throttle-retries - default:12, how many times to retry before giving up and returning the error response</p>
+<ul>
+<li><code>:retry-on-throttle-errors</code>: whether to retry throttled requests (default <code>true</code>)</li>
+<li><code>:throttle-retry-delay</code>: how many seconds to wait between throttle retries (default <code>60</code>)</li>
+<li><code>:max-throttle-retries</code>: how many times to retry before giving up and returning the error response (default <code>12</code>)</li>
+</ul>
 
-<p>  In the response:</p>
+<p>In the response:</p>
 
-<p>  :throttle-retry-count - number of retries (absent when 0)</p>
+<ul>
+<li><code>:throttle-retry-count</code>: number of retries (key is absent when there were no retries)</li>
+</ul>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-retry-on-throttle-errors
   [client]
   (fn [req]
@@ -3139,7 +3143,7 @@ net.brehaut.ClojureTools = (function (SH) {
                 (Thread/sleep (* wait-seconds 1000))
                 (recur (+ 1 retries))))))))))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def ^:private query-string-methods
-  #{:get :head :delete})</pre></td></tr><tr><td class="docs">
+  #{:get :head :delete})</pre></td></tr><tr><td class="docs"><p>Middleware which renames <code>:params</code> to <code>:query-params</code> when method is GET, HEAD, or DELETE. For other methods, <code>:params</code> becomes <code>:form-params</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-generic-params-key
   [client]
   (fn [req]
@@ -3151,7 +3155,7 @@ net.brehaut.ClojureTools = (function (SH) {
         (client (-&gt; req
                     (dissoc :params)
                     (assoc :form-params params))))
-      (client req))))</pre></td></tr><tr><td class="docs">
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Wraps a request function with an appropriate stack of middleware.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn wrap-request
   [request]
   (-&gt; request
@@ -3187,7 +3191,8 @@ net.brehaut.ClojureTools = (function (SH) {
       wrap-shop
       wrap-ssl))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def request
-  (wrap-request clj-http.core/request))</pre></td></tr><tr><td class="docs"><p>Converts resource keywords to their plural forms, unless they're singleton resources.</p>
+  ^{:doc &quot;Makes a request to the Shopify API.&quot;}
+  (wrap-request clj-http.core/request))</pre></td></tr><tr><td class="docs"><p>Converts resource keywords to their plural forms, unless it's a singleton resource (e.g. <code>:shop</code>).</p>
 </td><td class="codes"><pre class="brush: clojure">(defn collection-name
   [resource]
   (let [resource (name resource)]
@@ -3204,11 +3209,11 @@ net.brehaut.ClojureTools = (function (SH) {
       (str/replace-first resource #&quot;s?$&quot; &quot;&quot;))))
 (def member-keyword (comp keyword member-name))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def path-params
-  ^{:doc &quot;Takes a route template like \&quot;/admin/blogs/:blog_id/articles\&quot; and returns a set of dynamic segments as keywords like #{:blog_id}&quot;}
+  ^{:doc &quot;Takes a route template like `\&quot;/admin/blogs/:blog_id/articles\&quot;` and returns a set of dynamic segments as keywords like `#{:blog_id}`.&quot;}
   (memoize (fn path-params [route]
              (-&gt;&gt; (re-seq #&quot;(?&lt;=:)\w+&quot; route)
                   (map keyword)
-                  set))))</pre></td></tr><tr><td class="docs"><p>Pick the first satisfyable route template in a collection, given a collection of available keys</p>
+                  set))))</pre></td></tr><tr><td class="docs"><p>Pick the first satisfyable route template in a collection, given a collection of available keys.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn pick-route
   [routes params]
   (let [available-keys (-&gt;&gt; params
@@ -3218,7 +3223,7 @@ net.brehaut.ClojureTools = (function (SH) {
     (some #(let [unfilled-segments (set/difference (path-params %)
                                                    (set available-keys))]
              (when (empty? unfilled-segments) %))
-          routes)))</pre></td></tr><tr><td class="docs"><p>Given a route template and a map of params, return a partial request map</p>
+          routes)))</pre></td></tr><tr><td class="docs"><p>Given a route template and a map of params, return a partial request map of <code>:uri</code> and <code>:params</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn render-route
   [route params]
   (let [dynamic-segments (path-params route)
@@ -3323,59 +3328,60 @@ net.brehaut.ClojureTools = (function (SH) {
    :transactions
    {:routes
     {:collection (prefixed-collection-routes
-                   :transactions &quot;/admin/orders/:order_id&quot;)}}})</pre></td></tr><tr><td class="docs"><p>Takes a resource-type (e.g. :products) and cardinality (:member or :collection) and returns a sequence of routes.</p>
+                   :transactions &quot;/admin/orders/:order_id&quot;)}}})</pre></td></tr><tr><td class="docs"><p>Takes a resource type keword (e.g. <code>:products</code>) and cardinality (<code>:member</code> or <code>:collection</code>) and returns a sequence of routes.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn routes-for-resource
   [resource-type cardinality]
   (or (get-in resource-types [resource-type :routes cardinality])
       (if (= :member cardinality)
         (shallow-member-routes resource-type)
-        (shallow-collection-routes resource-type))))</pre></td></tr><tr><td class="docs">
+        (shallow-collection-routes resource-type))))</pre></td></tr><tr><td class="docs"><p>Takes a resource type keword (e.g. <code>:products</code>), a cardinality (<code>:member</code> or <code>:collection</code>), and a map of params. Returns a partial request map of <code>:uri</code> and <code>:params</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn endpoint
   [resource-type cardinality params]
   (-&gt; (routes-for-resource resource-type cardinality)
       (pick-route params)
-      (render-route params)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def scope-keys-for-resource
-  (memoize (fn scope-keys-for-resource
-             [resource-type]
-             (let [routes (mapcat (partial routes-for-resource resource-type)
-                                  [:collection :member])]
-               (into #{} (mapcat path-params routes))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn transform-parent-resource-attrs
+      (render-route params)))</pre></td></tr><tr><td class="docs"><p>Takes a resource type keyword and a map of member attributes, and returns a possibly altered map suitable for extracting path params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti prepare-path-params
+  (fn [resource-type attrs] resource-type))
+(defmethod prepare-path-params :default
+  [_ attrs]
+  attrs)
+(defn transform-parent-resource-attrs
   [attrs]
   (let [renamed-attrs (set/rename-keys attrs {:owner_resource :resource
                                               :owner_id :resource_id})
         resource (:resource renamed-attrs)]
     (if (string? resource)
       (assoc renamed-attrs :resource (collection-name resource))
-      renamed-attrs)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmulti attrs-as-scope-params
-  (fn [resource-type attrs] resource-type))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmethod attrs-as-scope-params :events
-  [_ attrs] (transform-parent-resource-attrs attrs))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmethod attrs-as-scope-params :metafields
-  [_ attrs] (transform-parent-resource-attrs attrs))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmethod attrs-as-scope-params :default
-  [_ attrs]
-  attrs)</pre></td></tr><tr><td class="docs"><p>Takes a map and a predicate and returns two maps split by which keys satisfy the predicate</p>
+      renamed-attrs)))
+(defmethod prepare-path-params :events
+  [_ attrs] (transform-parent-resource-attrs attrs))
+(defmethod prepare-path-params :metafields
+  [_ attrs] (transform-parent-resource-attrs attrs))</pre></td></tr><tr><td class="docs"><p>Takes a map and a predicate and returns two maps split by which keys satisfy the predicate</p>
 </td><td class="codes"><pre class="brush: clojure">(defn partition-keys
   [m pred]
   (reduce (fn [result [k v]]
             (let [i (if (pred k) 0 1)]
               (assoc-in result [i k] v)))
           [{} {}]
-          m))</pre></td></tr><tr><td class="docs"><p>Takes a resource type-keyword and a map of member attributes, and returns a map of scope params and a map of the remaining attributes</p>
-</td><td class="codes"><pre class="brush: clojure">(defn extract-scope-params
+          m))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def path-param-keys-for-resource
+  ^{:doc &quot;Returns a set of all the &quot;}
+  (memoize (fn path-param-keys-for-resource
+             [resource-type]
+             (let [routes (mapcat (partial routes-for-resource resource-type)
+                                  [:collection :member])]
+               (into #{} (mapcat path-params routes))))))</pre></td></tr><tr><td class="docs"><p>Takes a resource type-keyword and a map of member attributes, and returns a map of path params and a map of the remaining attributes</p>
+</td><td class="codes"><pre class="brush: clojure">(defn extract-path-params
   [resource-type member-attrs]
-  (partition-keys (attrs-as-scope-params resource-type member-attrs)
-                  (scope-keys-for-resource resource-type)))</pre></td></tr><tr><td class="docs">
+  (partition-keys (prepare-path-params resource-type member-attrs)
+                  (path-param-keys-for-resource resource-type)))</pre></td></tr><tr><td class="docs"><p>Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. <code>{:id 99, :page {:title "foo"}}</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn attrs-to-params
   [resource-type attrs]
-  (let [[scope-params attrs] (extract-scope-params resource-type attrs)
+  (let [[scope-params attrs] (extract-path-params resource-type attrs)
         root-key (member-keyword resource-type)]
     (if (empty? attrs)
       scope-params
-      (assoc scope-params root-key attrs))))</pre></td></tr><tr><td class="docs">
+      (assoc scope-params root-key attrs))))</pre></td></tr><tr><td class="docs"><p>Takes a keyword <code>resource-type</code> and a map of <code>attrs</code>, and returns a partial request map for creating a resource member.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti create-request
   (fn [resource-type attrs] resource-type))
 (declare update-request)
@@ -3386,13 +3392,13 @@ net.brehaut.ClojureTools = (function (SH) {
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (endpoint resource-type :collection params)
-      :method :post)))</pre></td></tr><tr><td class="docs">
+      :method :post)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get a collection of the given resource type with the given params.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti get-collection-request
   (fn [resource-type params] resource-type))
 (defmethod get-collection-request :default
   [resource-type params]
   (assoc (endpoint resource-type :collection params)
-    :method :get))</pre></td></tr><tr><td class="docs">
+    :method :get))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get a member of the given resource with the given attributes.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti get-member-request
   (fn [resource-type attrs] resource-type))
 (defn default-get-member-request
@@ -3408,14 +3414,14 @@ net.brehaut.ClojureTools = (function (SH) {
     (default-get-member-request :assets (select-keys attrs pk-keys))))
 (defmethod get-member-request :default
   [resource-type attrs]
-  (default-get-member-request resource-type attrs))</pre></td></tr><tr><td class="docs">
+  (default-get-member-request resource-type attrs))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to update a member of the given resource with the given attributes.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti update-request
   (fn [resource-type attrs] resource-type))
 (defmethod update-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (endpoint resource-type :member params)
-      :method :put)))</pre></td></tr><tr><td class="docs">
+      :method :put)))</pre></td></tr><tr><td class="docs"><p>Returns true if the given attributes appear to refer to a member which already exists on the server.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti persisted?
   (fn [resource-type attrs] resource-type))
 (defmethod persisted? :assets
@@ -3424,69 +3430,62 @@ net.brehaut.ClojureTools = (function (SH) {
 (defmethod persisted? :default
   [resource-type attrs]
   (contains? attrs :id))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def new?
+  ^{:doc &quot;Returns false if the given attributes appear to refer to a member which already exists on the server.&quot;}
+  (complement persisted?))</pre></td></tr><tr><td class="docs"><p>Delegates to <code>create-request</code> if the attributes are new, or <code>update-request</code> if they're persisted.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti save-request
   (fn [resource-type attrs] resource-type))
 (defmethod save-request :default
   [resource-type attrs]
   (if (persisted? resource-type attrs)
     (update-request resource-type attrs)
-    (create-request resource-type attrs)))</pre></td></tr><tr><td class="docs">
+    (create-request resource-type attrs)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to delete a resource member.</p>
 </td><td class="codes"><pre class="brush: clojure">(defmulti delete-request
   (fn [resource-type attrs] resource-type))
 (defmethod delete-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (endpoint resource-type :member params)
-      :method :delete)))</pre></td></tr><tr><td class="docs">
+      :method :delete)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get the count of the given resource/params.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-count-request
   [resource-type params]
-  (get-collection-request resource-type (assoc params :action :count)))</pre></td></tr><tr><td class="docs">
+  (get-collection-request resource-type (assoc params :action :count)))</pre></td></tr><tr><td class="docs"><p>Takes a response map and returns the collection of the given type, if it is present.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn extract-collection
   [response resource-type]
-  (get-in response [:body (collection-keyword resource-type)]))</pre></td></tr><tr><td class="docs">
+  (get-in response [:body (collection-keyword resource-type)]))</pre></td></tr><tr><td class="docs"><p>Takes a response map and returns the member of the given type, if it is present.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn extract-member
   [response resource-type]
-  (get-in response [:body (member-keyword resource-type)]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn create!
-  [session resource-type &amp; [attrs]]
-  (-&gt; (create-request resource-type (or attrs {}))
-      (merge session)
-      request
-      (extract-member resource-type)))</pre></td></tr><tr><td class="docs">
+  (get-in response [:body (member-keyword resource-type)]))</pre></td></tr><tr><td class="docs"><p>Takes a session (a partial request map with <code>:shop</code> and <code>:access-token</code>), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-collection
   [session resource-type &amp; [params]]
   (-&gt; (get-collection-request resource-type (or params {}))
       (merge session)
       request
-      (extract-collection resource-type)))</pre></td></tr><tr><td class="docs">
+      (extract-collection resource-type)))</pre></td></tr><tr><td class="docs"><p>Takes a session, a resource type, and an optional map of attributes (often with just an <code>:id</code>). Returns a fresh map of member attributes from the server.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-member
-  [session resource-type &amp; [attrs]]
-  (-&gt; (get-member-request resource-type (or attrs {}))
+  [session resource-type attrs]
+  (-&gt; (get-member-request resource-type attrs)
       (merge session)
       request
-      (extract-member resource-type)))</pre></td></tr><tr><td class="docs">
+      (extract-member resource-type)))</pre></td></tr><tr><td class="docs"><p>Takes a session, a resource type keyword, and an optional map of params. Returns the count of the corresponding resource collection, as an integer.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-count
   [session resource-type &amp; [params]]
   (-&gt; (get-count-request resource-type (or params {}))
       (merge session)
       request
-      (extract-member :count)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn update!
-  [session resource-type &amp; [attrs]]
-  (-&gt; (update-request resource-type (or attrs {}))
-      (merge session)
-      request
-      (extract-member resource-type)))</pre></td></tr><tr><td class="docs">
+      (extract-member :count)))</pre></td></tr><tr><td class="docs"><p>Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn save!
-  [session resource-type &amp; [attrs]]
-  (-&gt; (save-request resource-type (or attrs {}))
+  [session resource-type attrs]
+  (-&gt; (save-request resource-type attrs)
+      (merge session)
+      request
+      (extract-member resource-type)))</pre></td></tr><tr><td class="docs"><p>Takes a session, resource type, and a map of attributes (often with just an <code>:id</code>). Sends a DELETE to the server and possibly returns an updated map of the deleted resource.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn delete!
+  [session resource-type attrs]
+  (-&gt; (delete-request resource-type attrs)
       (merge session)
       request
       (extract-member resource-type)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn delete!
-  [session resource-type &amp; [attrs]]
-  (-&gt; (delete-request resource-type (or attrs {}))
-      (merge session)
-      request
-      (extract-member resource-type)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+</td><td class="codes"><pre class="brush: clojure">(defn page-seq-requests
+  [session resource-type &amp; [attrs]])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>

@@ -14,7 +14,7 @@
     (str x)))
 
 (defn params->query-string
-  "Builds Rails-style nested query strings from param maps"
+  "Builds Rails-style nested query strings from param maps."
   [data & [prefix]]
   (cond
     (sequential? data)
@@ -40,7 +40,7 @@
     prefix))
 
 (defn wrap-query-params
-  "Middleware which converts a :query-params map into a Rails-style nested :query-string"
+  "Middleware which converts a `:query-params` map into a Rails-style nested `:query-string`."
   [client]
   (fn [{:keys [query-params] :as req}]
     (if query-params
@@ -52,6 +52,7 @@
       (client req))))
 
 (defn wrap-json-format
+  "Middleware which forces JSON for everything, and appends `.json` to paths if it isn't already there."
   [client]
   (fn [req]
     (let [req (assoc req
@@ -63,7 +64,7 @@
         (client req)))))
 
 (defn wrap-access-token
-  "Middleware converting an :access-token option into the appropriate auth header"
+  "Middleware converting an `:access-token` option into the appropriate auth header."
   [client]
   (fn [req]
     (if-let [token (:access-token req)]
@@ -73,7 +74,7 @@
       (client req))))
 
 (defn wrap-ssl
-  "Middleware defaulting requests to ssl"
+  "Middleware defaulting requests to SSL."
   [client]
   (fn [req]
     (if-let [scheme (:scheme req)]
@@ -82,7 +83,7 @@
                   (assoc :scheme :https))))))
 
 (defn wrap-shop
-  "Middleware converting a :shop option into :server-name"
+  "Middleware converting a `:shop` option into `:server-name`."
   [client]
   (fn [req]
     (if-let [shop (:shop req)]
@@ -93,16 +94,16 @@
 
 (defn wrap-retry-on-throttle-errors
   "Middleware which retries a request if it's being throttled.
-  
-  Request options:
-  
-  :retry-on-throttle-errors - default:true, whether to retry throttled requests
-  :throttle-retry-delay - default:60, how many seconds to wait between throttle retries
-  :max-throttle-retries - default:12, how many times to retry before giving up and returning the error response
-  
-  In the response:
-  
-  :throttle-retry-count - number of retries (absent when 0)"
+
+Request options:
+
+* `:retry-on-throttle-errors`: whether to retry throttled requests (default `true`)
+* `:throttle-retry-delay`: how many seconds to wait between throttle retries (default `60`)
+* `:max-throttle-retries`: how many times to retry before giving up and returning the error response (default `12`)
+
+In the response:
+
+* `:throttle-retry-count`: number of retries (key is absent when there were no retries)"
   [client]
   (fn [req]
     (if (= false (:retry-on-throttle-errors req))
@@ -125,6 +126,7 @@
   #{:get :head :delete})
 
 (defn wrap-generic-params-key
+  "Middleware which renames `:params` to `:query-params` when method is GET, HEAD, or DELETE. For other methods, `:params` becomes `:form-params`."
   [client]
   (fn [req]
     (if-let [params (:params req)]
@@ -138,6 +140,7 @@
       (client req))))
 
 (defn wrap-request
+  "Wraps a request function with an appropriate stack of middleware."
   [request]
   (-> request
       clj-http.client/wrap-request-timing
@@ -173,10 +176,11 @@
       wrap-ssl))
 
 (def request
+  ^{:doc "Makes a request to the Shopify API."}
   (wrap-request clj-http.core/request))
 
 (defn collection-name
-  "Converts resource keywords to their plural forms, unless they're singleton resources."
+  "Converts resource keywords to their plural forms, unless it's a singleton resource (e.g. `:shop`)."
   [resource]
   (let [resource (name resource)]
     (case resource
@@ -195,14 +199,14 @@
 (def member-keyword (comp keyword member-name))
 
 (def path-params
-  ^{:doc "Takes a route template like \"/admin/blogs/:blog_id/articles\" and returns a set of dynamic segments as keywords like #{:blog_id}"}
+  ^{:doc "Takes a route template like `\"/admin/blogs/:blog_id/articles\"` and returns a set of dynamic segments as keywords like `#{:blog_id}`."}
   (memoize (fn path-params [route]
              (->> (re-seq #"(?<=:)\w+" route)
                   (map keyword)
                   set))))
 
 (defn pick-route
-  "Pick the first satisfyable route template in a collection, given a collection of available keys"
+  "Pick the first satisfyable route template in a collection, given a collection of available keys."
   [routes params]
   (let [available-keys (->> params
                             (filter #(not (nil? (val %))))
@@ -215,7 +219,7 @@
 
 
 (defn render-route
-  "Given a route template and a map of params, return a partial request map"
+  "Given a route template and a map of params, return a partial request map of `:uri` and `:params`."
   [route params]
   (let [dynamic-segments (path-params route)
         reducer (fn [req [k v :as param]]
@@ -335,7 +339,7 @@
                    :transactions "/admin/orders/:order_id")}}})
 
 (defn routes-for-resource
-  "Takes a resource-type (e.g. :products) and cardinality (:member or :collection) and returns a sequence of routes."
+  "Takes a resource type keword (e.g. `:products`) and cardinality (`:member` or `:collection`) and returns a sequence of routes."
   [resource-type cardinality]
   (or (get-in resource-types [resource-type :routes cardinality])
       (if (= :member cardinality)
@@ -343,18 +347,18 @@
         (shallow-collection-routes resource-type))))
 
 (defn endpoint
+  "Takes a resource type keword (e.g. `:products`), a cardinality (`:member` or `:collection`), and a map of params. Returns a partial request map of `:uri` and `:params`."
   [resource-type cardinality params]
   (-> (routes-for-resource resource-type cardinality)
       (pick-route params)
       (render-route params)))
 
-(def scope-keys-for-resource
-  (memoize (fn scope-keys-for-resource
-             [resource-type]
-             (let [routes (mapcat (partial routes-for-resource resource-type)
-                                  [:collection :member])]
-               (into #{} (mapcat path-params routes))))))
-
+(defmulti prepare-path-params
+  "Takes a resource type keyword and a map of member attributes, and returns a possibly altered map suitable for extracting path params."
+  (fn [resource-type attrs] resource-type))
+(defmethod prepare-path-params :default
+  [_ attrs]
+  attrs)
 (defn transform-parent-resource-attrs
   [attrs]
   (let [renamed-attrs (set/rename-keys attrs {:owner_resource :resource
@@ -363,19 +367,10 @@
     (if (string? resource)
       (assoc renamed-attrs :resource (collection-name resource))
       renamed-attrs)))
-
-(defmulti attrs-as-scope-params
-  (fn [resource-type attrs] resource-type))
-
-(defmethod attrs-as-scope-params :events
+(defmethod prepare-path-params :events
   [_ attrs] (transform-parent-resource-attrs attrs))
-
-(defmethod attrs-as-scope-params :metafields
+(defmethod prepare-path-params :metafields
   [_ attrs] (transform-parent-resource-attrs attrs))
-
-(defmethod attrs-as-scope-params :default
-  [_ attrs]
-  attrs)
 
 (defn partition-keys
   "Takes a map and a predicate and returns two maps split by which keys satisfy the predicate"
@@ -386,21 +381,31 @@
           [{} {}]
           m))
 
-(defn extract-scope-params
-  "Takes a resource type-keyword and a map of member attributes, and returns a map of scope params and a map of the remaining attributes"
+(def path-param-keys-for-resource
+  ^{:doc "Returns a set of all the "}
+  (memoize (fn path-param-keys-for-resource
+             [resource-type]
+             (let [routes (mapcat (partial routes-for-resource resource-type)
+                                  [:collection :member])]
+               (into #{} (mapcat path-params routes))))))
+
+(defn extract-path-params
+  "Takes a resource type-keyword and a map of member attributes, and returns a map of path params and a map of the remaining attributes"
   [resource-type member-attrs]
-  (partition-keys (attrs-as-scope-params resource-type member-attrs)
-                  (scope-keys-for-resource resource-type)))
+  (partition-keys (prepare-path-params resource-type member-attrs)
+                  (path-param-keys-for-resource resource-type)))
 
 (defn attrs-to-params
+  "Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. `{:id 99, :page {:title \"foo\"}}`."
   [resource-type attrs]
-  (let [[scope-params attrs] (extract-scope-params resource-type attrs)
+  (let [[scope-params attrs] (extract-path-params resource-type attrs)
         root-key (member-keyword resource-type)]
     (if (empty? attrs)
       scope-params
       (assoc scope-params root-key attrs))))
 
 (defmulti create-request
+  "Takes a keyword `resource-type` and a map of `attrs`, and returns a partial request map for creating a resource member."
   (fn [resource-type attrs] resource-type))
 (declare update-request)
 (defmethod create-request :assets
@@ -413,6 +418,7 @@
       :method :post)))
 
 (defmulti get-collection-request
+  "Returns a partial request map to get a collection of the given resource type with the given params."
   (fn [resource-type params] resource-type))
 (defmethod get-collection-request :default
   [resource-type params]
@@ -420,6 +426,7 @@
     :method :get))
 
 (defmulti get-member-request
+  "Returns a partial request map to get a member of the given resource with the given attributes."
   (fn [resource-type attrs] resource-type))
 (defn default-get-member-request
   [resource-type attrs]
@@ -437,6 +444,7 @@
   (default-get-member-request resource-type attrs))
 
 (defmulti update-request
+  "Returns a partial request map to update a member of the given resource with the given attributes."
   (fn [resource-type attrs] resource-type))
 (defmethod update-request :default
   [resource-type attrs]
@@ -445,6 +453,7 @@
       :method :put)))
 
 (defmulti persisted?
+  "Returns true if the given attributes appear to refer to a member which already exists on the server."
   (fn [resource-type attrs] resource-type))
 (defmethod persisted? :assets
   [resource-type attrs]
@@ -453,7 +462,12 @@
   [resource-type attrs]
   (contains? attrs :id))
 
+(def new?
+  ^{:doc "Returns false if the given attributes appear to refer to a member which already exists on the server."}
+  (complement persisted?))
+
 (defmulti save-request
+  "Delegates to `create-request` if the attributes are new, or `update-request` if they're persisted."
   (fn [resource-type attrs] resource-type))
 (defmethod save-request :default
   [resource-type attrs]
@@ -462,6 +476,7 @@
     (create-request resource-type attrs)))
 
 (defmulti delete-request
+  "Returns a partial request map to delete a resource member."
   (fn [resource-type attrs] resource-type))
 (defmethod delete-request :default
   [resource-type attrs]
@@ -470,25 +485,22 @@
       :method :delete)))
 
 (defn get-count-request
+  "Returns a partial request map to get the count of the given resource/params."
   [resource-type params]
   (get-collection-request resource-type (assoc params :action :count)))
 
 (defn extract-collection
+  "Takes a response map and returns the collection of the given type, if it is present."
   [response resource-type]
   (get-in response [:body (collection-keyword resource-type)]))
 
 (defn extract-member
+  "Takes a response map and returns the member of the given type, if it is present."
   [response resource-type]
   (get-in response [:body (member-keyword resource-type)]))
 
-(defn create!
-  [session resource-type & [attrs]]
-  (-> (create-request resource-type (or attrs {}))
-      (merge session)
-      request
-      (extract-member resource-type)))
-
 (defn get-collection
+  "Takes a session (a partial request map with `:shop` and `:access-token`), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server."
   [session resource-type & [params]]
   (-> (get-collection-request resource-type (or params {}))
       (merge session)
@@ -496,36 +508,37 @@
       (extract-collection resource-type)))
 
 (defn get-member
-  [session resource-type & [attrs]]
-  (-> (get-member-request resource-type (or attrs {}))
+  "Takes a session, a resource type, and an optional map of attributes (often with just an `:id`). Returns a fresh map of member attributes from the server."
+  [session resource-type attrs]
+  (-> (get-member-request resource-type attrs)
       (merge session)
       request
       (extract-member resource-type)))
 
 (defn get-count
+  "Takes a session, a resource type keyword, and an optional map of params. Returns the count of the corresponding resource collection, as an integer."
   [session resource-type & [params]]
   (-> (get-count-request resource-type (or params {}))
       (merge session)
       request
       (extract-member :count)))
 
-(defn update!
-  [session resource-type & [attrs]]
-  (-> (update-request resource-type (or attrs {}))
-      (merge session)
-      request
-      (extract-member resource-type)))
-
 (defn save!
-  [session resource-type & [attrs]]
-  (-> (save-request resource-type (or attrs {}))
+  "Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource."
+  [session resource-type attrs]
+  (-> (save-request resource-type attrs)
       (merge session)
       request
       (extract-member resource-type)))
 
 (defn delete!
-  [session resource-type & [attrs]]
-  (-> (delete-request resource-type (or attrs {}))
+  "Takes a session, resource type, and a map of attributes (often with just an `:id`). Sends a DELETE to the server and possibly returns an updated map of the deleted resource."
+  [session resource-type attrs]
+  (-> (delete-request resource-type attrs)
       (merge session)
       request
       (extract-member resource-type)))
+
+(defn page-seq-requests
+  [session resource-type & [attrs]]
+  )
