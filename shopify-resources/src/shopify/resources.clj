@@ -539,7 +539,3 @@ In the response:
       (merge session)
       request
       (extract-member resource-type)))
-
-(defn page-seq-requests
-  [session resource-type & [attrs]]
-  )
