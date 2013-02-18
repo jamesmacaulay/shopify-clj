@@ -2,12 +2,12 @@
   "Functions for making requests against a shop's authenticated API."
   (:use [shopify.resources.names :only [member-keyword
                                         collection-keyword]])
-  (:require [shopify.resources.client-middleware :as middleware]
+  (:require [shopify.resources.client :as client]
             [shopify.resources.routes :as routes]))
 
 (def request
   ^{:doc "Makes a request to the Shopify API."}
-  middleware/request)
+  client/request)
 
 (defn attrs-to-params
   "Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. `{:id 99, :page {:title \"foo\"}}`."

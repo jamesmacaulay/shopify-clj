@@ -1,6 +1,6 @@
-(ns shopify.resources.client-middleware-test
+(ns shopify.resources.client-test
   (:use clojure.test
-        [shopify.resources.client-middleware :as middleware]))
+        shopify.resources.client))
 
 (def default-session
   {:shop "xerxes.myshopify.com"
