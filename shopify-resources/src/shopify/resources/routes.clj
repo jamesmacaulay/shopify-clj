@@ -1,6 +1,6 @@
 (ns shopify.resources.routes
   "Functions to determine the endpoint of a resource. You probably don't need to use these—use the `shopify.resources` namespace to make requests."
-  (:use [shopify.resources.names :only [collection-name]])
+  (:use [shopify.resources.names :only [collection-name collection-keyword]])
   (:require [clojure.string :as str]
             [clojure.set :as set]
             [shopify.util :as util]
@@ -25,7 +25,6 @@
              (when (empty? unfilled-segments) %))
           routes)))
 
-
 (defn render-route
   "Given a route template and a map of params, return a partial request map of `:uri` and `:params`."
   [route params]
@@ -41,7 +40,6 @@
     (reduce reducer
             {:uri route}
             params)))
-
 
 (defn- collection-route
   ([resource]
@@ -128,11 +126,11 @@
    :product_images
    {:routes
     {:collection (prefixed-collection-routes
-                   :product_images "/admin/products/:product_id")}}
+                   :images "/admin/products/:product_id")}}
    :product_variants
    {:routes
     {:collection (prefixed-collection-routes
-                   :product_variants "/admin/products/:product_id")}}
+                   :variants "/admin/products/:product_id")}}
    :provinces
    {:routes
     {:collection (prefixed-collection-routes
@@ -149,10 +147,11 @@
 (defn routes-for-resource
   "Takes a resource type keword (e.g. `:products`) and cardinality (`:member` or `:collection`) and returns a sequence of routes."
   [resource-type cardinality]
-  (or (get-in resource-types [resource-type :routes cardinality])
-      (if (= :member cardinality)
-        (shallow-member-routes resource-type)
-        (shallow-collection-routes resource-type))))
+  (let [resource-type (collection-keyword resource-type)]
+    (or (get-in resource-types [resource-type :routes cardinality])
+        (if (= :member cardinality)
+          (shallow-member-routes resource-type)
+          (shallow-collection-routes resource-type)))))
 
 (defn endpoint
   "Takes a resource type keword (e.g. `:products`), a cardinality (`:member` or `:collection`), and a map of params. Returns a partial request map of `:uri` and `:params`."

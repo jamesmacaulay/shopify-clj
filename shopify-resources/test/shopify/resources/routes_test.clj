@@ -2,12 +2,10 @@
   (:use clojure.test
         [shopify.resources.routes :as routes]))
 
-
 (deftest path-params-test
   (testing "path-params takes a route template string and returns a set of keywords corresponding to its colon-prefixed dynamic segments"
     (is (= #{:owner_resource :owner_id}
            (path-params "/admin/:owner_resource/:owner_id/metafields")))))
-
 
 (deftest pick-route-test
   (testing "(pick-route routes params) returns the first satisfyable route template in routes, given the available keys in params"
@@ -30,7 +28,6 @@
                         "/admin/articles/:id"]
                        {:foo "bar"})))))
 
-
 (deftest render-route-test
   (testing "render-route takes a route template and some params and returns a partial request map"
     (is (= {:uri "/admin/blogs/1/articles/2"}
@@ -44,12 +41,11 @@
                         :id 2
                         :article {:body_html "<p>foo</p>"}})))))
 
-
 (deftest routes-for-resource-test
   (testing "(routes-for-resource :future_resources :collection) returns the default shallow collection routes"
     (is (= ["/admin/future_resources/:action"
             "/admin/future_resources"]
-           (routes-for-resource :future_resources :collection))))
+           (routes-for-resource :future-resources :collection))))
   (testing "(routes-for-resource :future_resources :member) returns the default shallow member routes"
     (is (= ["/admin/future_resources/:id/:action"
             "/admin/future_resources/:id"]
@@ -73,7 +69,11 @@
   (testing "(routes-for-resource :shop :member) returns the shop routes"
     (is (= ["/admin/shop/:action"
             "/admin/shop"]
-           (routes-for-resource :shop :member)))))
+           (routes-for-resource :shop :member))))
+  (testing "routes-for-resource uses the collection-name form of the type keyword"
+    (is (= ["/admin/products/:product_id/images/:action"
+            "/admin/products/:product_id/images"]
+           (routes-for-resource :product-image :collection)))))
 
 (deftest endpoint-test
   (testing "(endpoint :orders :collection {:since_id 99}) returns the endpoint with those params"
