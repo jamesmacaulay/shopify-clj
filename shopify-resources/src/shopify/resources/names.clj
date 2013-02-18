@@ -1,11 +1,12 @@
 (ns shopify.resources.names
   "A few functions to help with resource type names."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [shopify.util :as util]))
 
 (defn collection-name
   "Converts resource keywords to their plural forms, unless it's a singleton resource (e.g. `:shop`)."
   [resource]
-  (let [resource (name resource)]
+  (let [resource (util/dashes->underscores resource)]
     (case resource
       ("country" "countries") "countries"
       ("shop" "shops") "shop"
@@ -16,7 +17,7 @@
 (defn member-name
   "Converts resource keywords to their singular forms."
   [resource]
-  (let [resource (name resource)]
+  (let [resource (util/dashes->underscores resource)]
     (case resource
       ("country" "countries") "country"
       (str/replace-first resource #"s?$" ""))))

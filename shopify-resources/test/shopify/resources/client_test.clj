@@ -108,6 +108,25 @@
              (wrapped-identity {:request-method :post
                                 :params {:foo "bar"}}))))))
 
+(deftest wrap-underscored-request-params-test
+  (testing "wrap-underscored-request-params turns `:foo-bar` param keywords into `:foo_bar`."
+    (let [wrapped-identity (wrap-underscored-request-params identity)]
+      (is (= {:query-params {:foo_bar "baz-buzz"
+                             :keyword :as_a_value}}
+             (wrapped-identity {:query-params {:foo-bar "baz-buzz"
+                                               :keyword :as-a-value}}))))))
+
+(deftest wrap-dasherized-response-test
+  (testing "wrap-dasherized-response turns `:foo_bar` keywords in the response into `:foo-bar`."
+    (let [wrapped-underscore-emitter
+          (wrap-dasherized-response
+            (fn [req]
+              {:body {:foo_foo {:bar_id 99
+                                :images [{:baz_id 101} {:baz_id 102}]}}}))]
+      (is (= {:body {:foo-foo {:bar-id 99
+                               :images [{:baz-id 101} {:baz-id 102}]}}}
+             (wrapped-underscore-emitter {}))))))
+
 (deftest wrap-all-middleware-test
   (testing "(wrap-request clj-http-client) wraps the client fn in the appropriate middleware for Shopify resource requests, transforming the requests and responses correctly"
     (let [raw-page-count-response {:status 200
@@ -132,7 +151,7 @@
                       (assoc
                         :method :get
                         :uri "/admin/pages/count"
-                        :params {:since_id 108828309}))
+                        :params {:since-id 108828309}))
           wrapped-assertions (wrap-request
                                (fn [req]
                                  (is (= {:scheme :https

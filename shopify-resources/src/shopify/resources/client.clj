@@ -1,6 +1,8 @@
 (ns shopify.resources.client
   "A custom middleware stack to make Shopify API requests with clj-http."
-  (:use [shopify.util :only [name-str]])
+  (:use [shopify.util :only [name-str
+                             dashes->underscores
+                             underscores->dashes]])
   (:require [clojure.string :as str]
             clj-http.core
             clj-http.client
@@ -116,6 +118,33 @@ In the response:
                 (Thread/sleep (* wait-seconds 1000))
                 (recur (+ 1 retries))))))))))
 
+(defn convert-keywords
+  [data convert-fn]
+  (clojure.walk/postwalk #(if (keyword? %)
+                            (keyword (convert-fn %))
+                            %)
+                         data))
+
+(defn wrap-underscored-request-params
+  [client]
+  (fn [req]
+    (let [all-params (select-keys req #{:query-params :form-params})
+          all-underscored-params
+          (into {}
+                (map (fn [[k params]]
+                       [k (convert-keywords params
+                                            dashes->underscores)])
+                all-params))]
+      (client (merge req all-underscored-params)))))
+
+(defn wrap-dasherized-response
+  [client]
+  (fn [req]
+    (let [response (client req)]
+      (assoc response
+        :body (convert-keywords (:body response)
+                                underscores->dashes)))))
+
 (def ^:private query-string-methods
   #{:get :head :delete})
 
@@ -159,6 +188,8 @@ In the response:
       clj-http.client/wrap-content-type
       clj-http.client/wrap-form-params
       ; clj-http.client/wrap-nested-params
+      wrap-underscored-request-params
+      wrap-dasherized-response
       wrap-generic-params-key
       clj-http.client/wrap-method
       ; clj-http.cookies/wrap-cookies
