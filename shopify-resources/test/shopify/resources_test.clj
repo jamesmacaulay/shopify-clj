@@ -1,6 +1,6 @@
 (ns shopify.resources-test
   (:use clojure.test
-        [shopify.resources :as shop :exclude [comment]]))
+        [shopify.resources :as shop]))
 
 (deftest create-request-test
   (testing "(create-request resource-type attrs) returns a partial request map"

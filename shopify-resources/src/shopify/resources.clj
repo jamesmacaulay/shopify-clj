@@ -1,11 +1,9 @@
 (ns shopify.resources
   "Functions for making requests against a shop's authenticated API."
-  (:refer-clojure :exclude [comment])
   (:use [shopify.resources.names :only [member-keyword
                                         collection-keyword]])
   (:require [shopify.resources.client-middleware :as middleware]
-            [shopify.resources.routes :as routes]
-            clj-http.util))
+            [shopify.resources.routes :as routes]))
 
 (def request
   ^{:doc "Makes a request to the Shopify API."}
