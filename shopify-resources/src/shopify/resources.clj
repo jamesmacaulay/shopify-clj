@@ -159,6 +159,11 @@
         request
         (extract-member :count))))
 
+(defn get-shop
+  "A convenience function to get the singleton shop resource."
+  [& [request-opts]]
+  (get-one :shop {} request-opts))
+
 (defn save!
   "Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource."
   [& args]
