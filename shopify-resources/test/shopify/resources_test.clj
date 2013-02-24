@@ -166,3 +166,25 @@
             :uri "/admin/pages/count"
             :params {:since_id 99}}
            (get-count-request :pages {:since_id 99})))))
+
+(deftest extract-kicker-args-test
+  (testing "extract-kicker-args handles an args sequence with resource-type keyword, params, and request options"
+    (is (= [:bar
+            {:since-id 99
+             :shopify.resources/type :foo}
+            {:shop "foo"}]
+           (extract-kicker-args [:bar
+                                 {:since-id 99
+                                  :shopify.resources/type :foo}
+                                 {:shop "foo"}]))))
+  (testing "extract-kicker-args uses the embedded type in params if the resource-type keyword is missing"
+    (is (= [:foo
+            {:since-id 99
+             :shopify.resources/type :foo}
+            {:shop "foo"}]
+           (extract-kicker-args [{:since-id 99
+                                  :shopify.resources/type :foo}
+                                 {:shop "foo"}]))))
+  (testing "extract-kicker-args defaults params to {}"
+    (is (= [nil {} nil]
+           (extract-kicker-args [])))))
