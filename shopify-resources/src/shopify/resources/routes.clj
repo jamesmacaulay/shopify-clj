@@ -35,7 +35,7 @@
                       :uri (str/replace-first
                              (:uri req)
                              (re-pattern (str k "(?=$|\\/)"))
-                             (clj-http.util/url-encode (util/name-str v))))
+                             (clj-http.util/url-encode (util/as-namespaced-str v))))
                     (assoc-in req [:params k] v)))]
     (reduce reducer
             {:uri route}

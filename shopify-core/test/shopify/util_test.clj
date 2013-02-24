@@ -2,16 +2,19 @@
   (:use clojure.test
         shopify.util))
 
-(deftest name-str-test
-  (testing "(name-str :keyword) returns the keyword's `name`."
+(deftest as-namespaced-str-test
+  (testing "(as-namespaced-str :keyword) returns the keyword's `name`."
     (is (= "foo"
-           (name-str :foo))))
-  (testing "(name-str \"string\") returns the string."
+           (as-namespaced-str :foo))))
+  (testing "(as-namespaced-str \"string\") returns the string."
     (is (= "foo"
-           (name-str "foo"))))
-  (testing "name-str returns the `str` value of the argument by default."
+           (as-namespaced-str "foo"))))
+  (testing "as-namespaced-str returns the `str` value of the argument by default."
     (is (= "42"
-           (name-str 42)))))
+           (as-namespaced-str 42))))
+  (testing "as-namespaced-str returns the namespace and name of a namespaced keyword"
+    (is (= "foo/bar"
+           (as-namespaced-str :foo/bar)))))
 
 (deftest dashes->underscores-test
   (testing "dashes->underscores replaces all dashes"

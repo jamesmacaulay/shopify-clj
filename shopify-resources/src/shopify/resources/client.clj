@@ -1,6 +1,6 @@
 (ns shopify.resources.client
   "A custom middleware stack to make Shopify API requests with clj-http."
-  (:use [shopify.util :only [name-str
+  (:use [shopify.util :only [as-namespaced-str
                              dashes->underscores
                              underscores->dashes]]
         [shopify.resources.names :only [member-keyword]])
@@ -31,7 +31,7 @@
                     (if prefix (str prefix \[ k \]) k)))))
          (str/join \&))
     data
-    (->> (name-str data)
+    (->> (as-namespaced-str data)
          clj-http.util/url-encode
          (str prefix (when prefix \=)))
     :else
@@ -167,7 +167,7 @@ In the response:
   [k m]
   (assoc m :shopify.resources/type (member-keyword k)))
 
-(defn- insert-types 
+(defn- insert-types
   [[k v]]
   (cond
     (map? v) [k (assoc-type k v)]

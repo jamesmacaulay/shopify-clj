@@ -1,20 +1,20 @@
 (ns shopify.util
   (:require [clojure.string :as str]))
 
-(defn name-str
+(defn as-namespaced-str
   "Returns the name of a keyword, or the string value of anything else."
   [x]
   (if (keyword? x)
-    (name x)
+    (subs (str x) 1)
     (str x)))
 
 (defn dashes->underscores
   [string]
-  (str/replace (name-str string) "-" "_"))
+  (str/replace (as-namespaced-str string) "-" "_"))
 
 (defn underscores->dashes
   [string]
-  (str/replace (name-str string) "_" "-"))
+  (str/replace (as-namespaced-str string) "_" "-"))
 
 (defn partition-keys
   "Takes a map and a predicate and returns two maps split by which keys satisfy the predicate"
