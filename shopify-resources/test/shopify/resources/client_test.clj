@@ -32,9 +32,9 @@
               :content-type :json}
              (wrapped-identity {:uri "/admin/products.json"}))))))
 
-(deftest wrap-access-token-middleware-test
-  (testing "(wrap-access-token clj-http-client) wraps the client to convert an :access-token key into the appropriate auth header"
-    (let [wrapped-identity (wrap-access-token identity)]
+(deftest wrap-auth-test
+  (let [wrapped-identity (wrap-auth identity)]
+    (testing "(wrap-auth clj-http-client) wraps the client to convert an :access-token key into the appropriate auth header"
       (is (= {:shop "xerxes.myshopify.com"
               :headers {"x-shopify-access-token" "e5ea7fb51ff27a20c3f622df66b9acdc"}}
              (wrapped-identity default-session)))
@@ -42,7 +42,13 @@
               :headers {"foo" "bar"
                         "x-shopify-access-token" "e5ea7fb51ff27a20c3f622df66b9acdc"}}
              (wrapped-identity (-> default-session
-                                   (assoc :headers {"foo" "bar"}))))))))
+                                   (assoc :headers {"foo" "bar"}))))))
+    (testing "wrap-auth transforms :api-key and :password entries into a :basic-auth entry"
+      (is (= {:shop "xerxes.myshopify.com"
+              :basic-auth ["1234" "qwerty"]}
+             (wrapped-identity {:shop "xerxes.myshopify.com"
+                                :api-key "1234"
+                                :password "qwerty"}))))))
 
 (deftest wrap-shop-middleware-test
   (testing "(wrap-shop clj-http-client) wraps the client to change :shop keys into :server-name keys"

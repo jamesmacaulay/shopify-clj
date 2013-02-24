@@ -61,14 +61,30 @@
         (client (assoc req :uri (str/replace uri #"(?<!\.json)$" ".json")))
         (client req)))))
 
-(defn wrap-access-token
-  "Middleware converting an `:access-token` option into the appropriate auth header."
+(defn prepare-oauth2-request
+  [req]
+  (-> req
+      (dissoc :access-token)
+      (assoc-in [:headers "x-shopify-access-token"]
+                (:access-token req))))
+
+(defn prepare-basic-auth-request
+  [req]
+  (-> req
+      (dissoc :api-key :password)
+      (assoc :basic-auth [(:api-key req) (:password req)])))
+
+(defn wrap-auth
+  "If `:access-token` is present in the request, converts it into the appropriate auth header. Otherwise it looks for `:api-key` and `:password` to use basic auth."
   [client]
   (fn [req]
-    (if-let [token (:access-token req)]
-      (client (-> req
-                  (dissoc :access-token)
-                  (assoc-in [:headers "x-shopify-access-token"] token)))
+    (cond
+      (contains? req :access-token)
+        (client (prepare-oauth2-request req))
+      (and (contains? req :api-key)
+           (contains? req :password))
+        (client (prepare-basic-auth-request req))
+      :else
       (client req))))
 
 (defn wrap-ssl
@@ -211,7 +227,7 @@ In the response:
       clj-http.client/wrap-lower-case-headers
       ; clj-http.client/wrap-query-params
       wrap-query-params
-      ; clj-http.client/wrap-basic-auth
+      clj-http.client/wrap-basic-auth
       ; clj-http.client/wrap-oauth
       ; clj-http.client/wrap-user-info
       ; clj-http.client/wrap-url
@@ -238,7 +254,7 @@ In the response:
       clj-http.links/wrap-links
       ; clj-http.client/wrap-unknown-host
       wrap-json-format
-      wrap-access-token
+      wrap-auth
       wrap-shop
       wrap-ssl))
 
