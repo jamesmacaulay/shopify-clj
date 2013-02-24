@@ -44,32 +44,32 @@
                             :key "snippets/foo.liquid"
                             :value "<p>{{settings.foo}}</p>"})))))
 
-(deftest get-collection-request-test
-  (testing "(get-collection-request resource-type params) returns a partial request map"
+(deftest get-list-request-test
+  (testing "(get-list-request resource-type params) returns a partial request map"
     (is (= {:method :get
             :uri "/admin/pages"
             :params {:since_id 99}}
-           (get-collection-request :pages
+           (get-list-request :pages
                                    {:since_id 99}))))
-  (testing "get-collection-request works with metafields"
+  (testing "get-list-request works with metafields"
     (is (= {:method :get
             :uri "/admin/pages/101/metafields"
             :params {:since_id 99}}
-           (get-collection-request :metafields
+           (get-list-request :metafields
                                    {:resource :pages
                                     :resource_id 101
                                     :since_id 99})))))
 
-(deftest get-member-request-test
-  (testing "(get-member-request resource-type attrs) returns a partial request map"
+(deftest get-one-request-test
+  (testing "(get-one-request resource-type attrs) returns a partial request map"
     (is (= {:method :get
             :uri "/admin/pages/99"}
-           (get-member-request :pages {:id 99}))))
-  (testing "get-member-request works with theme assets"
+           (get-one-request :pages {:id 99}))))
+  (testing "get-one-request works with theme assets"
     (is (= {:method :get
             :uri "/admin/themes/99/assets"
             :params {:asset {:key "snippets/foo.liquid"}}}
-           (get-member-request :assets {:theme_id 99
+           (get-one-request :assets {:theme_id 99
                                         :key "snippets/foo.liquid"})))))
 
 (deftest update-request-test

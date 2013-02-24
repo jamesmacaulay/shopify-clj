@@ -31,31 +31,31 @@
     (assoc (routes/endpoint resource-type :collection params)
       :method :post)))
 
-(defmulti get-collection-request
+(defmulti get-list-request
   "Returns a partial request map to get a collection of the given resource type with the given params."
   (fn [resource-type params] resource-type))
-(defmethod get-collection-request :default
+(defmethod get-list-request :default
   [resource-type params]
   (assoc (routes/endpoint resource-type :collection params)
     :method :get))
 
-(defmulti get-member-request
+(defmulti get-one-request
   "Returns a partial request map to get a member of the given resource with the given attributes."
   (fn [resource-type attrs] resource-type))
-(defn default-get-member-request
+(defn default-get-one-request
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (routes/endpoint resource-type :member params)
       :method :get)))
-(defmethod get-member-request :assets
+(defmethod get-one-request :assets
   [_ attrs]
   (let [pk-keys (if (nil? (:theme_id attrs))
                   #{:key}
                   #{:theme_id :key})]
-    (default-get-member-request :assets (select-keys attrs pk-keys))))
-(defmethod get-member-request :default
+    (default-get-one-request :assets (select-keys attrs pk-keys))))
+(defmethod get-one-request :default
   [resource-type attrs]
-  (default-get-member-request resource-type attrs))
+  (default-get-one-request resource-type attrs))
 
 (defmulti update-request
   "Returns a partial request map to update a member of the given resource with the given attributes."
@@ -101,7 +101,7 @@
 (defn get-count-request
   "Returns a partial request map to get the count of the given resource/params."
   [resource-type params]
-  (get-collection-request resource-type (assoc params :action :count)))
+  (get-list-request resource-type (assoc params :action :count)))
 
 (defn extract-collection
   "Takes a response map and returns the collection of the given type, if it is present."
@@ -113,18 +113,18 @@
   [response resource-type]
   (get-in response [:body (member-keyword resource-type)]))
 
-(defn get-collection
+(defn get-list
   "Takes a session (a partial request map with `:shop` and `:access-token`), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server."
   [session resource-type & [params]]
-  (-> (get-collection-request resource-type (or params {}))
+  (-> (get-list-request resource-type (or params {}))
       (merge session)
       request
       (extract-collection resource-type)))
 
-(defn get-member
+(defn get-one
   "Takes a session, a resource type, and an optional map of attributes (often with just an `:id`). Returns a fresh map of member attributes from the server."
   [session resource-type attrs]
-  (-> (get-member-request resource-type attrs)
+  (-> (get-one-request resource-type attrs)
       (merge session)
       request
       (extract-member resource-type)))
