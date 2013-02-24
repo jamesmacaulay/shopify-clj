@@ -2,8 +2,10 @@
   "A custom middleware stack to make Shopify API requests with clj-http."
   (:use [shopify.util :only [name-str
                              dashes->underscores
-                             underscores->dashes]])
+                             underscores->dashes]]
+        [shopify.resources.names :only [member-keyword]])
   (:require [clojure.string :as str]
+            [clojure.walk :as walk]
             clj-http.core
             clj-http.client
             clj-http.links
@@ -145,6 +147,44 @@ In the response:
         :body (convert-keywords (:body response)
                                 underscores->dashes)))))
 
+(defn- assoc-type
+  [k m]
+  (assoc m :shopify.resources/type (member-keyword k)))
+
+(defn- insert-types 
+  [[k v]]
+  (cond
+    (map? v) [k (assoc-type k v)]
+    (sequential? v) [k (vec (map (partial assoc-type k) v))]
+    :else [k v]))
+
+(defn embed-resource-types
+  [data]
+  (walk/postwalk #(if (map? %)
+                    (into {} (map insert-types %))
+                    %)
+                 data))
+
+(defn wrap-embed-resource-types-in-response
+  [client]
+  (fn [req]
+    (let [response (client req)]
+      (assoc response :body (embed-resource-types (:body response))))))
+
+(defn remove-namespaced-keys
+  [data]
+  (walk/postwalk #(if (map? %)
+                    (into {} (remove (comp namespace key) %))
+                    %)
+                 data))
+
+(defn wrap-remove-namespaced-keys-from-request-params
+  [client]
+  (fn [req]
+    (let [all-params (select-keys req #{:query-params :form-params})
+          all-stripped-params (remove-namespaced-keys all-params)]
+      (client (merge req all-stripped-params)))))
+
 (def ^:private query-string-methods
   #{:get :head :delete})
 
@@ -188,8 +228,10 @@ In the response:
       clj-http.client/wrap-content-type
       clj-http.client/wrap-form-params
       ; clj-http.client/wrap-nested-params
-      wrap-underscored-request-params
+      wrap-embed-resource-types-in-response
+      wrap-remove-namespaced-keys-from-request-params
       wrap-dasherized-response
+      wrap-underscored-request-params
       wrap-generic-params-key
       clj-http.client/wrap-method
       ; clj-http.cookies/wrap-cookies

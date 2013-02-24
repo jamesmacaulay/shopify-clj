@@ -127,6 +127,61 @@
                                :images [{:baz-id 101} {:baz-id 102}]}}}
              (wrapped-underscore-emitter {}))))))
 
+(deftest embed-resource-types-test
+  (testing "embed-resource-types inserts :shopify.resources/type values into all resource entities in a nested map"
+    (is (= {:products [{:shopify.resources/type :product
+                        :id 100
+                        :variants [{:shopify.resources/type :variant
+                                    :id 1000}
+                                   {:shopify.resources/type :variant
+                                    :id 1001}]
+                        :images [{:shopify.resources/type :image
+                                  :id 2000}]}]}
+           (embed-resource-types
+             {:products [{:id 100
+                         :variants [{:id 1000} {:id 1001}]
+                         :images [{:id 2000}]}]})))))
+
+(deftest wrap-embed-resource-types-in-response-test
+  (testing "wrap-embed-resource-types-in-response inserts a :shopify.resources/type value into all resource entities in the response"
+    (let [wrapped-identity
+          (wrap-embed-resource-types-in-response identity)]
+      (is (= {:body {:page {:shopify.resources/type :page
+                            :id 99}}}
+             (wrapped-identity {:body {:page {:id 99}}}))))))
+
+(deftest remove-namespaced-keys-test
+  (testing "remove-namespaced-keys removes all namespaced map entries from the given data structure"
+    (is (= {:product {:id 100
+                      :variants [{:id 1000} {:id 1001}]
+                      :images [{:id 2000}]}}
+           (remove-namespaced-keys
+             {:product {:shopify.resources/type :product
+                        :id 100
+                        :variants [{:shopify.resources/type :variant
+                                    :id 1000}
+                                   {:shopify.resources/type :variant
+                                    :id 1001}]
+                        :images [{:shopify.resources/type :image
+                                  :id 2000}]}})))))
+
+(deftest wrap-remove-namespaced-keys-from-request-params-test
+  (testing "wrap-remove-namespaced-keys-from-request-params removed namespaced map entries from query-params and form-params"
+    (let [wrapped-identity
+          (wrap-remove-namespaced-keys-from-request-params identity)]
+      (is (= {:query-params {:asset {:key "snippets/foo.liquid"}}
+              :uri "/admin/assets"}
+             (wrapped-identity
+               {:query-params {:asset {:shopify.resources/type :asset
+                                       :key "snippets/foo.liquid"}}
+                :uri "/admin/assets"})))
+      (is (= {:form-params {:page {:title "foo"}}
+              :uri "/admin/pages/99"}
+             (wrapped-identity
+               {:form-params {:page {:shopify.resources/type :page
+                                     :title "foo"}}
+                :uri "/admin/pages/99"}))))))
+
 (deftest wrap-all-middleware-test
   (testing "(wrap-request clj-http-client) wraps the client fn in the appropriate middleware for Shopify resource requests, transforming the requests and responses correctly"
     (let [raw-page-count-response {:status 200
