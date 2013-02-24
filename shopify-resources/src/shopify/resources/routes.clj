@@ -123,11 +123,11 @@
    :metafields
    {:routes (prefixed-and-shallow-routes
               :metafields "/admin/:resource/:resource_id")}
-   :product_images
+   :images
    {:routes
     {:collection (prefixed-collection-routes
                    :images "/admin/products/:product_id")}}
-   :product_variants
+   :variants
    {:routes
     {:collection (prefixed-collection-routes
                    :variants "/admin/products/:product_id")}}

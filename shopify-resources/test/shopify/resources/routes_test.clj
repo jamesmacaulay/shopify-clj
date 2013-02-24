@@ -73,7 +73,7 @@
   (testing "routes-for-resource uses the collection-name form of the type keyword"
     (is (= ["/admin/products/:product_id/images/:action"
             "/admin/products/:product_id/images"]
-           (routes-for-resource :product-image :collection)))))
+           (routes-for-resource :image :collection)))))
 
 (deftest endpoint-test
   (testing "(endpoint :orders :collection {:since_id 99}) returns the endpoint with those params"
