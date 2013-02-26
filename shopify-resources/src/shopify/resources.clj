@@ -129,57 +129,42 @@
                         (:shopify.resources/type params))]
     [resource-type params request-opts]))
 
-(defn get-list
-  "Takes a session (a partial request map with `:shop` and `:access-token`), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server."
-  [& args]
-  (let [[resource-type params request-opts] (extract-kicker-args args)]
-    (-> (merge *base-request-opts*
-               (get-list-request resource-type params)
-               request-opts)
-        request
-        (extract-collection resource-type))))
+(defn kicker-fn
+  [request-fn extract-fn]
+  (fn [& args]
+    (let [[resource-type params request-opts] (extract-kicker-args args)
+          response (request (merge *base-request-opts*
+                                   (request-fn resource-type params)
+                                   request-opts))]
+      (extract-fn response resource-type))))
 
-(defn get-one
-  "Takes a session, a resource type, and an optional map of attributes (often with just an `:id`). Returns a fresh map of member attributes from the server."
-  [& args]
-  (let [[resource-type params request-opts] (extract-kicker-args args)]
-    (-> (merge *base-request-opts*
-               (get-one-request resource-type params)
-               request-opts)
-        request
-        (extract-member resource-type))))
+(def get-list
+  ^{:doc "Takes a session (a partial request map with `:shop` and `:access-token`), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server."}
+  (kicker-fn get-list-request
+             extract-collection))
 
-(defn get-count
-  "Takes a session, a resource type keyword, and an optional map of params. Returns the count of the corresponding resource collection, as an integer."
-  [& args]
-  (let [[resource-type params request-opts] (extract-kicker-args args)]
-    (-> (merge *base-request-opts*
-               (get-count-request resource-type params)
-               request-opts)
-        request
-        (extract-member :count))))
+(def get-one
+  ^{:doc "Takes a session, a resource type, and an optional map of attributes (often with just an `:id`). Returns a fresh map of member attributes from the server."}
+  (kicker-fn get-one-request
+             extract-member))
+
+(def get-count
+  ^{:doc "Takes a session, a resource type keyword, and an optional map of params. Returns the count of the corresponding resource collection, as an integer."}
+  (kicker-fn get-count-request
+             (fn [response _] (get-in response [:body :count]))))
 
 (defn get-shop
   "A convenience function to get the singleton shop resource."
   [& [request-opts]]
   (get-one :shop {} request-opts))
 
-(defn save!
-  "Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource."
-  [& args]
-  (let [[resource-type params request-opts] (extract-kicker-args args)]
-    (-> (merge *base-request-opts*
-               (save-request resource-type params)
-               request-opts)
-        request
-        (extract-member resource-type))))
+(def save!
+  ^{:doc "Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource."}
+  (kicker-fn save-request
+             extract-member))
 
-(defn delete!
-  "Takes a session, resource type, and a map of attributes (often with just an `:id`). Sends a DELETE to the server and possibly returns an updated map of the deleted resource."
-  [& args]
-  (let [[resource-type params request-opts] (extract-kicker-args args)]
-    (-> (merge *base-request-opts*
-               (delete-request resource-type params)
-               request-opts)
-        request
-        (extract-member resource-type))))
+(def delete!
+  ^{:doc "Takes a session, resource type, and a map of attributes (often with just an `:id`). Sends a DELETE to the server and possibly returns an updated map of the deleted resource."}
+  (kicker-fn delete-request
+             extract-member))
+
