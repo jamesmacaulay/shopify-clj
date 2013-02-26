@@ -188,6 +188,21 @@
                                      :title "foo"}}
                 :uri "/admin/pages/99"}))))))
 
+(deftest attach-response-to-resource-metadata-test
+  (testing "attach-response-to-resource-metadata attaches the given response as metadata to any maps nested in its :body, and returns the updated response with the embedded pseudo-self-referential metadata"
+    (let [original {:body {:products [{:id 99
+                                       :variants [{:id 101}]}]}}
+          result (attach-response-to-resource-metadata original)
+          product (-> result :body :products first)
+          variant (-> product :variants first)]
+      (is (= original result))
+      (is (= original
+             (-> product meta :shopify.resources/response)
+             (-> variant meta :shopify.resources/response)))
+      (is (= nil
+             (-> result :body :products meta)
+             (-> product :variants meta))))))
+
 (deftest wrap-all-middleware-test
   (testing "(wrap-request clj-http-client) wraps the client fn in the appropriate middleware for Shopify resource requests, transforming the requests and responses correctly"
     (let [raw-page-count-response {:status 200

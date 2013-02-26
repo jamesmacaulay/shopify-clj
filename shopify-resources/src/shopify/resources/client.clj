@@ -218,6 +218,18 @@ In the response:
                     (assoc :form-params params))))
       (client req))))
 
+(defn attach-response-to-resource-metadata
+  [response]
+  (let [body-with-meta
+        (walk/postwalk #(if (map? %)
+                          (with-meta % {:shopify.resources/response response})
+                          %)
+                       (:body response))]
+    (assoc response :body body-with-meta)))
+
+(def wrap-attach-response-to-resource-metadata
+  (partial comp attach-response-to-resource-metadata))
+
 (defn wrap-request
   "Wraps a request function with an appropriate stack of middleware."
   [request]
@@ -256,7 +268,8 @@ In the response:
       wrap-json-format
       wrap-auth
       wrap-shop
-      wrap-ssl))
+      wrap-ssl
+      wrap-attach-response-to-resource-metadata))
 
 (def request
   ^{:doc "Makes a request to the Shopify API."}
