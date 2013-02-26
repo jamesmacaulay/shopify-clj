@@ -3,7 +3,9 @@
   (:use [shopify.resources.names :only [member-keyword
                                         collection-keyword]])
   (:require [shopify.resources.client :as client]
-            [shopify.resources.routes :as routes]))
+            [shopify.resources.routes :as routes]
+            [flatland.useful.parallel :as parallel]
+            [plumbing.core :as plumbing]))
 
 (def request
   ^{:doc "Makes a request to the Shopify API."}
@@ -167,4 +169,24 @@
   ^{:doc "Takes a session, resource type, and a map of attributes (often with just an `:id`). Sends a DELETE to the server and possibly returns an updated map of the deleted resource."}
   (kicker-fn delete-request
              extract-member))
+
+(defn get-all
+  "Eagerly gets _all_ the resources described by the arguments in parallel. Returns a sequence which is a lazy concatenation of all pages."
+  [& args]
+  (let [[resource-type params request-opts] (extract-kicker-args args)
+        resource-count (get-count resource-type
+                                  params
+                                  request-opts)
+        page-size 250
+        page-count (-> (/ resource-count page-size) Math/ceil int)
+        page-numbers (range 1 (+ 1 page-count))
+        get-page (fn [n]
+                   (get-list resource-type
+                             (assoc params
+                               :limit page-size
+                               :page n)
+                             request-opts))
+        pages (parallel/pcollect get-page
+                                 page-numbers)]
+    (plumbing/aconcat pages)))
 
