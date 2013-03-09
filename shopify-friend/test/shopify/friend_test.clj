@@ -72,7 +72,7 @@
 
 (deftest handle-login-request-test
   (testing "(handle-login-request api-client request callback-path) returns a redirect response to the appropriate user-auth-url"
-    (let [request-url "/login?shop=foo.myshopify.com"
+    (let [request-url "/login?shop=foo"
           response
           (handle-login-request default-api-client
                                 (mock-request :get request-url)
@@ -104,5 +104,14 @@
                 :shop "foo.myshopify.com"}
                response))))))
 
-
+(deftest normalize-shop-domain-test
+  (testing "normalize-shop-domain doesn't touch .myshopify.com domains"
+    (is (= "foo.myshopify.com"
+           (normalize-shop-domain "foo.myshopify.com")))
+  (testing "normalize-shop-domain appends .myshopify.com if it isn't there already"
+    (is (= "foo.myshopify.com"
+           (normalize-shop-domain "foo"))))
+  (testing "normalize-shop-domain replaces .shopify.com with .myshopify.com"
+    (is (= "foo.myshopify.com"
+           (normalize-shop-domain "foo.shopify.com"))))))
 

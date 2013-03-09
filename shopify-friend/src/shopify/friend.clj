@@ -47,11 +47,22 @@
                 ::friend/workflow :shopify
                 ::friend/redirect-on-auth? true})))
 
+(defn normalize-shop-domain
+  "Puts in the .myshopify.com if necessary."
+  [domain]
+  (cond
+    (re-find #"\.myshopify\.com\z" domain)
+      domain
+    (re-find #"\.shopify\.com\z" domain)
+      (clojure.string/replace domain #"\.shopify\.com\z" ".myshopify.com")
+    :else (str domain ".myshopify.com")))
+
 (defn handle-login-request
   "Returns a redirect response to the user auth URL for the shop
   specified in the query params."
   [api-client request callback-path]
-  (let [shop (get-in request [:query-params "shop"])]
+  (let [shop (normalize-shop-domain (get-in request
+                                            [:query-params "shop"]))]
     (ring.util.response/redirect
       (user-auth-url api-client shop callback-path))))
 
