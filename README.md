@@ -8,8 +8,8 @@ A set of Clojure libraries for interacting with the [Shopify][shopify] platform:
 
 [shopify]: http://www.shopify.com/
 [friend]: https://github.com/cemerick/friend
-[auth-docs]: http://api.shopify.com/authentication.html
-[resource-docs]: http://api.shopify.com/
+[auth-docs]: http://docs.shopify.com/api/tutorials/oauth
+[resource-docs]: http://docs.shopify.com/api
 
 ## Installation
 
