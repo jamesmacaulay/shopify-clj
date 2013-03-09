@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Shop Launchpad</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/bootstrap/css/bootstrap.css" rel="stylesheet" media="screen">
+    <link href="/bootstrap/css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+
+    <div class="container">
+
+      <div class="navbar">
+        <div class="navbar-inner">
+          <a class="brand" href="/">Shop Launchpad</a>
+          <form class="navbar-form pull-right" action="/auth/shopify" method="get">
+            <input type="text" name="shop" placeholder="snowdevil.myshopify.com" />
+            <button type="submit" class="btn">Sign in</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="content">
+
+        <div class="shop-row row">
+          <div class="shop span4">
+            <a class="shop-image-link text-center" href="https://www.shopify.com/admin">
+              <img class="shop-image" src="http://cdn.shopify.com/s/files/1/0001/8392/products/p1000840_large.jpg" />
+            </a>
+
+            <div>
+              <div class="pull-right">
+                <a class="orders-badge badge badge-success" href="https://www.shopify.com/admin/orders" title="Unfulfilled orders">0</a>
+              </div>
+              <h2><a class="shop-name-link text-center" href="https://www.shopify.com/admin">Pretty Squares</a></h2>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+    </div>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script type="text/javascript" src="/bootstrap/js/bootstrap.js"></script>
+  </body>
+</html>
