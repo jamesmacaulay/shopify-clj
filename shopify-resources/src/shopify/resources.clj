@@ -5,13 +5,17 @@
   (:require [shopify.resources.client :as client]
             [shopify.resources.routes :as routes]
             [flatland.useful.parallel :as parallel]
-            [plumbing.core :as plumbing]))
+            [plumbing.core :as plumbing]
+            clj-http.core))
 
 (def request
-  ^{:doc "Makes a request to the Shopify API."}
-  client/request)
+  ^{:dynamic true
+    :doc "Makes a request to the Shopify API, using `clj-http` with a custom middleware stack."}
+  (client/wrap-request clj-http.core/request))
 
-(defn attrs-to-params
+(defn- firstarg [x & _] x)
+
+(defn- attrs-to-params
   "Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. `{:id 99, :page {:title \"foo\"}}`."
   [resource-type attrs]
   (let [[scope-params attrs] (routes/extract-path-params resource-type attrs)
@@ -22,7 +26,7 @@
 
 (defmulti create-request
   "Takes a keyword `resource-type` and a map of `attrs`, and returns a partial request map for creating a resource member."
-  (fn [resource-type attrs] resource-type))
+  firstarg)
 (declare update-request)
 (defmethod create-request :assets
   [_ attrs]
@@ -35,7 +39,7 @@
 
 (defmulti get-list-request
   "Returns a partial request map to get a collection of the given resource type with the given params."
-  (fn [resource-type params] resource-type))
+  firstarg)
 (defmethod get-list-request :default
   [resource-type params]
   (assoc (routes/endpoint resource-type :collection params)
@@ -43,8 +47,8 @@
 
 (defmulti get-one-request
   "Returns a partial request map to get a member of the given resource with the given attributes."
-  (fn [resource-type attrs] resource-type))
-(defn default-get-one-request
+  firstarg)
+(defn- default-get-one-request
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
     (assoc (routes/endpoint resource-type :member params)
@@ -61,7 +65,7 @@
 
 (defmulti update-request
   "Returns a partial request map to update a member of the given resource with the given attributes."
-  (fn [resource-type attrs] resource-type))
+  firstarg)
 (defmethod update-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
@@ -70,7 +74,7 @@
 
 (defmulti persisted?
   "Returns true if the given attributes appear to refer to a member which already exists on the server."
-  (fn [resource-type attrs] resource-type))
+  firstarg)
 (defmethod persisted? :assets
   [resource-type attrs]
   (contains? attrs :key))
@@ -84,7 +88,7 @@
 
 (defmulti save-request
   "Delegates to `create-request` if the attributes are new, or `update-request` if they're persisted."
-  (fn [resource-type attrs] resource-type))
+  firstarg)
 (defmethod save-request :default
   [resource-type attrs]
   (if (persisted? resource-type attrs)
@@ -93,7 +97,7 @@
 
 (defmulti delete-request
   "Returns a partial request map to delete a resource member."
-  (fn [resource-type attrs] resource-type))
+  firstarg)
 (defmethod delete-request :default
   [resource-type attrs]
   (let [params (attrs-to-params resource-type attrs)]
@@ -105,24 +109,43 @@
   [resource-type params]
   (get-list-request resource-type (assoc params :action :count)))
 
-(defn extract-collection
+(defn- extract-collection
   "Takes a response map and returns the collection of the given type, if it is present."
   [response resource-type]
   (get-in response [:body (collection-keyword resource-type)]))
 
-(defn extract-member
+(defn- extract-member
   "Takes a response map and returns the member of the given type, if it is present."
   [response resource-type]
   (get-in response [:body (member-keyword resource-type)]))
 
-(def ^:dynamic *base-request-opts* nil)
-
 (defmacro with-opts
+  "A convenience macro to define the same base request options for any request to the Shopify API. `opts` would most often be an auth map, but it could include any default options for the request."
   [opts & exprs]
-  `(binding [*base-request-opts* ~opts]
+  `(binding [client/*base-request-opts* ~opts]
      ~@exprs))
 
 (defn extract-kicker-args
+  "Used by the kicker functions to parse argument lists. The most verbose form takes a resource type keyword, a map of either params or attributes, and a map of request options:
+  
+    (def auth {:shop \"foo.myshopify.com\"
+               :access-token \"70bc2f19efa5129f202e661ac6fd38f3\"})
+    (get-list :products {:limit 2} auth)
+
+If you only provide one map, it's assumed to be the params/attributes, so you'll need to provide authentication with `with-opts`:
+
+    (with-opts auth
+      (get-list :products {:limit 2}))
+
+If you don't give a keyword as the first argument, the function will look for the resource type under a `:shopify.resources/type` key in the params/attributes map. This key is present in all resource attribute maps returned by the library, so you can chain together reading and writing operations conveniently like so:
+
+    (with-opts auth
+      (-> (get-one :page {:id 99})
+          (update-in [:title]
+                     clojure.string/upper-case)
+          (update-in [:body-html]
+                     #(clojure.string/replace % \".\" \"!\"))
+          save!))"
   [args]
   (let [[params request-opts] (filter map? args)
         params (or params {})
@@ -131,27 +154,27 @@
                         (:shopify.resources/type params))]
     [resource-type params request-opts]))
 
-(defn kicker-fn
+(defn- kicker-fn
+  "Takes a request-building function and a value-extracting function, and returns a function which actually performs the request."
   [request-fn extract-fn]
   (fn [& args]
     (let [[resource-type params request-opts] (extract-kicker-args args)
-          response (request (merge *base-request-opts*
-                                   (request-fn resource-type params)
+          response (request (merge (request-fn resource-type params)
                                    request-opts))]
       (extract-fn response resource-type))))
 
 (def get-list
-  ^{:doc "Takes a session (a partial request map with `:shop` and `:access-token`), a resource type keyword, and an optional map of params. Returns a sequence of fresh attribute maps from the server."}
+  ^{:doc "Performs a GET request for a resource collection, returning a sequence of attribute maps. See `extract-kicker-args` for the available argument forms."}
   (kicker-fn get-list-request
              extract-collection))
 
 (def get-one
-  ^{:doc "Takes a session, a resource type, and an optional map of attributes (often with just an `:id`). Returns a fresh map of member attributes from the server."}
+  ^{:doc "Performs a GET request for a resource member, returning a map of attributes."}
   (kicker-fn get-one-request
              extract-member))
 
 (def get-count
-  ^{:doc "Takes a session, a resource type keyword, and an optional map of params. Returns the count of the corresponding resource collection, as an integer."}
+  ^{:doc "Performs a GET request for the count of a resource collection, returning a `java.lang.Long`."}
   (kicker-fn get-count-request
              (fn [response _] (get-in response [:body :count]))))
 
@@ -161,12 +184,12 @@
   (get-one :shop {} request-opts))
 
 (def save!
-  ^{:doc "Takes a session, resource type, and a map of attributes. Sends either a POST or a PUT to the server and returns an updated map of attributes for the updated resource."}
+  ^{:doc "Performs either a POST or a PUT to save the given attributes."}
   (kicker-fn save-request
              extract-member))
 
 (def delete!
-  ^{:doc "Takes a session, resource type, and a map of attributes (often with just an `:id`). Sends a DELETE to the server and possibly returns an updated map of the deleted resource."}
+  ^{:doc "Performs a DELETE on the given resource."}
   (kicker-fn delete-request
              extract-member))
 

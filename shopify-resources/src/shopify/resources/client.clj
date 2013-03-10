@@ -6,7 +6,6 @@
         [shopify.resources.names :only [member-keyword]])
   (:require [clojure.string :as str]
             [clojure.walk :as walk]
-            clj-http.core
             clj-http.client
             clj-http.links
             clj-http.util))
@@ -232,6 +231,13 @@ In the response:
 (def wrap-attach-response-to-resource-metadata
   (partial comp attach-response-to-resource-metadata))
 
+(def ^:dynamic *base-request-opts* nil)
+
+(defn wrap-base-request-opts
+  [client]
+  (fn [req]
+    (client (merge *base-request-opts* req))))
+
 (defn wrap-request
   "Wraps a request function with an appropriate stack of middleware."
   [request]
@@ -271,9 +277,6 @@ In the response:
       wrap-auth
       wrap-shop
       wrap-ssl
-      wrap-attach-response-to-resource-metadata))
-
-(def request
-  ^{:doc "Makes a request to the Shopify API."}
-  (wrap-request clj-http.core/request))
+      wrap-attach-response-to-resource-metadata
+      wrap-base-request-opts))
 
