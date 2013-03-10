@@ -1,0 +1,17 @@
+/target/
+/lib/
+/classes/
+/checkouts/
+shopify-*/target/
+shopify-*/lib/
+shopify-*/classes/
+shopify-*/checkouts/
+examples
+pom.xml
+*.jar
+*.class
+*.org
+*.patch
+*.diff
+*.swp
+.lein-*
