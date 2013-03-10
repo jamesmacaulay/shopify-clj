@@ -3570,7 +3570,7 @@ config key is <code>:api-client</code>. Optional keys are <code>:login-path</cod
     (case resource
       (&quot;country&quot; &quot;countries&quot;) &quot;country&quot;
       (str/replace-first resource #&quot;s?$&quot; &quot;&quot;))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def member-keyword (comp keyword member-name))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.routes" name="shopify.resources.routes"><h1 class="project-name">shopify.resources.routes</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions to determine the endpoint of a resource. You probably don't need to use these—use the <code>shopify.resources</code> namespace to make requests.</p>
+</td><td class="codes"><pre class="brush: clojure">(def member-keyword (comp keyword member-name))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.routes" name="shopify.resources.routes"><h1 class="project-name">shopify.resources.routes</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions to determine the endpoint of a resource. You probably don't need to use these; use the <code>shopify.resources</code> namespace to make requests.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns shopify.resources.routes
   (:use [shopify.resources.names :only [collection-name collection-keyword]])
   (:require [clojure.string :as str]

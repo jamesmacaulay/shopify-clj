@@ -1,5 +1,5 @@
 (ns shopify.resources.routes
-  "Functions to determine the endpoint of a resource. You probably don't need to use these—use the `shopify.resources` namespace to make requests."
+  "Functions to determine the endpoint of a resource. You probably don't need to use these; use the `shopify.resources` namespace to make requests."
   (:use [shopify.resources.names :only [collection-name collection-keyword]])
   (:require [clojure.string :as str]
             [clojure.set :as set]
