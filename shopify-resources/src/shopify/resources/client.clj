@@ -165,7 +165,9 @@ In the response:
 
 (defn- assoc-type
   [k m]
-  (assoc m :shopify.resources/type (member-keyword k)))
+  (if (map? m)
+    (assoc m :shopify.resources/type (member-keyword k))
+    m))
 
 (defn- insert-types
   [[k v]]

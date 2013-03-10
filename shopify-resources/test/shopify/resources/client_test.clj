@@ -142,11 +142,13 @@
                                    {:shopify.resources/type :variant
                                     :id 1001}]
                         :images [{:shopify.resources/type :image
-                                  :id 2000}]}]}
+                                  :id 2000}]
+                        :strings ["foo" "bar" "baz"]}]}
            (embed-resource-types
              {:products [{:id 100
                          :variants [{:id 1000} {:id 1001}]
-                         :images [{:id 2000}]}]})))))
+                         :images [{:id 2000}]
+                         :strings ["foo" "bar" "baz"]}]})))))
 
 (deftest wrap-embed-resource-types-in-response-test
   (testing "wrap-embed-resource-types-in-response inserts a :shopify.resources/type value into all resource entities in the response"
