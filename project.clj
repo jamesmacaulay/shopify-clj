@@ -1,4 +1,4 @@
-(defproject shopify "0.1.0-SNAPSHOT"
+(defproject shopify "0.1.0"
   :description "A library for interacting with the Shopify platform."
   :url "https://github.com/jamesmacaulay/shopify-clj"
   :license {:name "Eclipse Public License"
