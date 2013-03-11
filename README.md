@@ -46,14 +46,59 @@ Private apps are the quickest way of getting started. Just [get some credentials
 
 ### Making requests
 
+Fire up a REPL and define an auth map for a private app as shown above. Now bring in the `shopify.resources` namespace:
+
 ```clojure
 (require '[shopify.resources :as shop])
+```
 
-(shop/get-list :products {:limit 2 :fields "id,title"} auth)
+And try out a few simple requests:
+
+```clojure
+(shop/get-shop auth)
+; {:country "CA", :longitude "-79.385324", ...}
+
+(shop/get-list :pages {:limit 2 :fields "id,title"} auth)
+; [{:shopify.resources/type :page, :id 9855484, :title "About Us"}
+;  {:shopify.resources/type :page, :id 9855482, :title "Welcome"}]
+
+(shop/get-one :page {:id 9855484} auth)
+; {:published-at "2013-03-10T23:49:41-04:00", :handle "about-us", ...}
+
+(shop/get-count :pages {} auth)
+; 2
+```
+
+The first map argument is always assumed to be the params or attributes of the request, which is why an empty map needed to be passed before `auth` in the `get-count` request (`get-shop` never takes any params).
+
+If you don't want to bother passing in the same auth map with every request, you can wrap your requests with the `with-opts` macro:
+
+```clojure
+(shop/with-opts auth
+  {:page-count (shop/get-count :pages)
+   :first-title (-> (shop/get-list :pages {:limit 1}) first :title)})
+; {:page-count 2, :first-title "About Us"}
+```
+
+You can create new member resources and update existing ones with `save!`:
+
+```clojure
+(shop/save! :page {:title "New page!" :body_html "<p>Hello!</p>"} auth)
+; {:published-at "2013-03-11T00:11:00-04:00", :handle "new-page", :id 9855576, ...}
 
 (shop/with-opts auth
-  (let [shop (future (shop/get-shop))
-        latest-order (future (shop/get-))]))
+  (-> (shop/get-one :page {:id 9855576})
+      (update-in [:title] clojure.string/upper-case)
+      shop/save!
+      (select-keys [:id :title])))
+; {:title "NEW PAGE!", :id 9855576}
+```
+
+And of course, you can delete stuff too:
+
+```clojure
+(shop/delete! :page {:id 9855576} auth)
+; nil
 ```
 
 ### OAuth2
