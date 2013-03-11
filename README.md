@@ -80,7 +80,7 @@ If you don't want to bother passing in the same auth map with every request, you
 ; {:page-count 2, :first-title "About Us"}
 ```
 
-You can create new member resources and update existing ones with `save!`:
+You can create and update with `save!`:
 
 ```clojure
 (shop/save! :page {:title "New page!" :body_html "<p>Hello!</p>"} auth)
@@ -94,12 +94,16 @@ You can create new member resources and update existing ones with `save!`:
 ; {:title "NEW PAGE!", :id 9855576}
 ```
 
-And of course, you can delete stuff too:
+The call to `save!` in the second example just had a single altered attribute map as its only argument (via the [thread-first macro][thread-first]). Instead of figuring out the resource type from the usual first keyword argument, it extracted the type from a `:shopify.resources/type` key which is embedded into all attribute maps returned by the library (and which is stripped from request params before they get serialized).
+
+Lastly, you can delete stuff:
 
 ```clojure
 (shop/delete! :page {:id 9855576} auth)
 ; nil
 ```
+
+[thread-first]: http://clojuredocs.org/clojure_core/clojure.core/-%3E
 
 ### OAuth2
 
