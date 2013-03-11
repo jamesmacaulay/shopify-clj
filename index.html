@@ -22,75 +22,14 @@
           <h2>A Clojure library for interacting with the Shopify API</h2>
         </header>
 
-        <section id="downloads" class="clearfix">
-          <a href="https://github.com/jamesmacaulay/shopify-clj/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
-          <a href="https://github.com/jamesmacaulay/shopify-clj/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
-          <a href="https://github.com/jamesmacaulay/shopify-clj" id="view-on-github" class="button"><span>View on GitHub</span></a>
-        </section>
-
         <hr>
 
         <section id="main_content">
-          <h1>shopify-clj</h1>
-
-<p>A <a href="http://clojure.org">Clojure</a> library for interacting with the <a href="http://www.shopify.com/">Shopify</a> platform.</p>
-
-<ul>
-<li>
-<code>shopify.resources</code>: functions for interacting with <a href="http://docs.shopify.com/api">a shop's resources</a>.</li>
-<li>
-<code>shopify.friend</code>: provides a <a href="https://github.com/cemerick/friend">friend</a> workflow to <a href="http://docs.shopify.com/api/tutorials/oauth">authenticate with Shopify shops</a> using OAuth2.</li>
-</ul><h2>Installation</h2>
-
-<p>Shopify artifacts are <a href="https://clojars.org/shopify/shopify">released to Clojars</a>.</p>
-
-<p><a href="https://github.com/technomancy/leiningen">Leiningen</a> is the way to go for managing dependencies in Clojure. Add the following to your project's <code>:dependencies</code>:</p>
-
-<pre><code>[shopify "0.1.0-SNAPSHOT"]
-</code></pre>
-
-<h2>Usage</h2>
-
-<p>First, you'll need to <a href="http://docs.shopify.com/api/the-basics/getting-started">get set up with the API</a>.</p>
-
-<p>The easiest way of accessing your dev shop is by <a href="http://docs.shopify.com/api/tutorials/creating-a-private-app">creating a private app</a>, but this is only really useful for experimentation. To use OAuth2, you'll have to <a href="http://docs.shopify.com/api/tutorials/oauth">create an OAuth2 app through your Partner account</a>.</p>
-
-<h3>Private App Authentication</h3>
-
-<div class="highlight"><pre><span class="p">(</span><span class="k">def </span><span class="nv">auth</span> <span class="p">{</span><span class="ss">:shop</span> <span class="s">"my-dev-shop.myshopify.com"</span>
-           <span class="ss">:api-key</span> <span class="s">"6dd96e9b19a0a7b3792f354eaf2a982b"</span>
-           <span class="ss">:password</span> <span class="s">"195b5baab7ce4581a861e925e930301d"</span><span class="p">})</span>
-</pre></div>
-
-<h3>OAuth2</h3>
-
-<p>If you're building a Shopify web app, you'll need to use OAuth2. The <code>shopify.friend</code> namespace provides a <a href="https://github.com/cemerick/friend">friend</a> workflow for this purpose.</p>
-
-<p>First, you'll need to define a map of key information about your app:</p>
-
-<div class="highlight"><pre><span class="p">(</span><span class="k">def </span><span class="nv">my-shopify-app</span>
-  <span class="p">{</span><span class="ss">:url</span> <span class="s">"http://localhost:3000"</span>
-   <span class="ss">:key</span> <span class="s">"70bc2f19efa5129f202e661ac6fd38f3"</span>
-   <span class="ss">:secret</span> <span class="s">"8eb54f11bedfad9c3e2287479f2d525c"</span>
-   <span class="ss">:scope</span> <span class="p">[</span><span class="ss">:read_products</span> <span class="ss">:read_orders</span><span class="p">]})</span>
-</pre></div>
-
-<h3>shopify.resources</h3>
-
-<div class="highlight"><pre><span class="p">(</span><span class="nf">require</span> <span class="o">'</span><span class="p">[</span><span class="nv">shopify.resources</span> <span class="ss">:as</span> <span class="nv">shop</span><span class="p">])</span>
-
-<span class="p">(</span><span class="nf">shop/get-list</span> <span class="ss">:products</span> <span class="p">{</span><span class="ss">:limit</span> <span class="mi">2</span> <span class="ss">:fields</span> <span class="s">"id,title"</span><span class="p">}</span> <span class="nv">auth</span><span class="p">)</span>
-
-<span class="p">(</span><span class="nf">shop/with-opts</span> <span class="nv">auth</span>
-  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">shop</span> <span class="p">(</span><span class="nf">future</span> <span class="p">(</span><span class="nf">shop/get-shop</span><span class="p">))</span>
-        <span class="nv">latest-order</span> <span class="p">(</span><span class="nf">future</span> <span class="p">(</span><span class="nf">shop/get-</span><span class="p">))]))</span>
-</pre></div>
-
-<h2>License</h2>
-
-<p>Copyright © 2012-2013 James MacAulay &amp; Shopify</p>
-
-<p>Distributed under the Eclipse Public License, the same as Clojure.</p>
+          <ul>
+            <li><a href="https://github.com/jamesmacaulay/shopify-clj">Repo</a></li>
+            <li><a href="http://jamesmacaulay.github.com/shopify-clj/docs/codox/index.html">Docs</a></li>
+            <li><a href="http://jamesmacaulay.github.com/shopify-clj/docs/marginalia/uberdoc.html">Annotated Source</a></li>
+          </ul>
         </section>
 
         <footer>
