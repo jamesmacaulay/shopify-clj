@@ -31,32 +31,66 @@
         <hr>
 
         <section id="main_content">
-          <h3>Welcome to GitHub Pages.</h3>
+          <h1>shopify-clj</h1>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+<p>A <a href="http://clojure.org">Clojure</a> library for interacting with the <a href="http://www.shopify.com/">Shopify</a> platform.</p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
+<ul>
+<li>
+<code>shopify.resources</code>: functions for interacting with <a href="http://docs.shopify.com/api">a shop's resources</a>.</li>
+<li>
+<code>shopify.friend</code>: provides a <a href="https://github.com/cemerick/friend">friend</a> workflow to <a href="http://docs.shopify.com/api/tutorials/oauth">authenticate with Shopify shops</a> using OAuth2.</li>
+</ul><h2>Installation</h2>
+
+<p>Shopify artifacts are <a href="https://clojars.org/shopify/shopify">released to Clojars</a>.</p>
+
+<p><a href="https://github.com/technomancy/leiningen">Leiningen</a> is the way to go for managing dependencies in Clojure. Add the following to your project's <code>:dependencies</code>:</p>
+
+<pre><code>[shopify "0.1.0-SNAPSHOT"]
 </code></pre>
 
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
+<h2>Usage</h2>
 
-<h3>Designer Templates</h3>
+<p>First, you'll need to <a href="http://docs.shopify.com/api/the-basics/getting-started">get set up with the API</a>.</p>
 
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
+<p>The easiest way of accessing your dev shop is by <a href="http://docs.shopify.com/api/tutorials/creating-a-private-app">creating a private app</a>, but this is only really useful for experimentation. To use OAuth2, you'll have to <a href="http://docs.shopify.com/api/tutorials/oauth">create an OAuth2 app through your Partner account</a>.</p>
 
-<h3>Rather Drive Stick?</h3>
+<h3>Private App Authentication</h3>
 
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
+<div class="highlight"><pre><span class="p">(</span><span class="k">def </span><span class="nv">auth</span> <span class="p">{</span><span class="ss">:shop</span> <span class="s">"my-dev-shop.myshopify.com"</span>
+           <span class="ss">:api-key</span> <span class="s">"6dd96e9b19a0a7b3792f354eaf2a982b"</span>
+           <span class="ss">:password</span> <span class="s">"195b5baab7ce4581a861e925e930301d"</span><span class="p">})</span>
+</pre></div>
 
-<h3>Authors and Contributors</h3>
+<h3>OAuth2</h3>
 
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
+<p>If you're building a Shopify web app, you'll need to use OAuth2. The <code>shopify.friend</code> namespace provides a <a href="https://github.com/cemerick/friend">friend</a> workflow for this purpose.</p>
 
-<h3>Support or Contact</h3>
+<p>First, you'll need to define a map of key information about your app:</p>
 
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+<div class="highlight"><pre><span class="p">(</span><span class="k">def </span><span class="nv">my-shopify-app</span>
+  <span class="p">{</span><span class="ss">:url</span> <span class="s">"http://localhost:3000"</span>
+   <span class="ss">:key</span> <span class="s">"70bc2f19efa5129f202e661ac6fd38f3"</span>
+   <span class="ss">:secret</span> <span class="s">"8eb54f11bedfad9c3e2287479f2d525c"</span>
+   <span class="ss">:scope</span> <span class="p">[</span><span class="ss">:read_products</span> <span class="ss">:read_orders</span><span class="p">]})</span>
+</pre></div>
+
+<h3>shopify.resources</h3>
+
+<div class="highlight"><pre><span class="p">(</span><span class="nf">require</span> <span class="o">'</span><span class="p">[</span><span class="nv">shopify.resources</span> <span class="ss">:as</span> <span class="nv">shop</span><span class="p">])</span>
+
+<span class="p">(</span><span class="nf">shop/get-list</span> <span class="ss">:products</span> <span class="p">{</span><span class="ss">:limit</span> <span class="mi">2</span> <span class="ss">:fields</span> <span class="s">"id,title"</span><span class="p">}</span> <span class="nv">auth</span><span class="p">)</span>
+
+<span class="p">(</span><span class="nf">shop/with-opts</span> <span class="nv">auth</span>
+  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">shop</span> <span class="p">(</span><span class="nf">future</span> <span class="p">(</span><span class="nf">shop/get-shop</span><span class="p">))</span>
+        <span class="nv">latest-order</span> <span class="p">(</span><span class="nf">future</span> <span class="p">(</span><span class="nf">shop/get-</span><span class="p">))]))</span>
+</pre></div>
+
+<h2>License</h2>
+
+<p>Copyright © 2012-2013 James MacAulay &amp; Shopify</p>
+
+<p>Distributed under the Eclipse Public License, the same as Clojure.</p>
         </section>
 
         <footer>
@@ -64,7 +98,17 @@ $ git checkout gh-pages
           This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
         </footer>
 
-        
+                  <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-209153-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
       </div>
     </div>
   </body>
