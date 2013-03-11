@@ -27,16 +27,16 @@ Shopify artifacts are [released to Clojars][clojars-shopify].
 
 ## Getting started
 
-First, you'll need to [get set up with the API][api-getting-started].
+First, you'll need to [get some API credentials and a development shop][api-getting-started].
 
-The easiest way of accessing your dev shop is by [creating a private app][private-apps], but this is only really useful for experimentation. To use OAuth2, you'll have to [create an OAuth2 app through your Partner account][api-getting-started].
+The easiest way of accessing an individual shop is by [creating a private app][private-apps], but this is only really useful for experimentation. To use OAuth2, you need to [create an app through your Partner account][api-getting-started].
 
 [api-getting-started]: http://docs.shopify.com/api/the-basics/getting-started
 [private-apps]: http://docs.shopify.com/api/tutorials/creating-a-private-app
 
 ### Private App Authentication
 
-Private apps are the quickest way of getting started. Just [get some credentials for your shop][private-apps] and put them in a map:
+Private apps are the quickest way of getting started. Just [get some credentials][private-apps] and put them in a map:
 
 ```clojure
 (def auth {:shop "my-dev-shop.myshopify.com"
@@ -84,9 +84,18 @@ This is used to configure the workflow provided by `shopify.friend`:
          :workflows [shopify-auth]})))
 ```
 
-Here's [a working example][example-server].
+Here's [a working example][example-server]. With the middleware in place, you can authenticate a shop by hitting `/auth/shopify?shop=some-shop.myshopify.com`. This is most often done [with a form][example-login-form].
 
-[example-server][https://github.com/jamesmacaulay/shopify-clj/blob/master/examples/shop-launchpad/src/shop_launchpad/server.clj]
+You can get a list of the current Shopify authentications from the request like so:
+
+```clojure
+(shopify.friend/shopify-auths request)
+```
+
+This returns a sequence of auth maps which can be used as the basis of shop resource requests in the same way as the auth map for a private app.
+
+[example-server]: https://github.com/jamesmacaulay/shopify-clj/blob/master/examples/shop-launchpad/src/shop_launchpad/server.clj
+[example-login-form]: https://github.com/jamesmacaulay/shopify-clj/blob/71344d9c0816d9b70c18b85fbb5fe15dd1523a80/examples/shop-launchpad/src/shop_launchpad/templates/index.html#L16-L19
 
 ## License
 
