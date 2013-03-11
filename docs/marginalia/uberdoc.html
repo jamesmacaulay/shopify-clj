@@ -3028,7 +3028,7 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>shopify -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">shopify</h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>A library for interacting with the Shopify platform.</p>
+</script><title>shopify -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">shopify</h1><h2 class="project-version">0.1.0</h2><br /><p>A library for interacting with the Shopify platform.</p>
 </div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">org.flatland/useful</td><td class="dotted"><hr /></td><td class="dep-version">0.9.4</td></tr><tr><td class="dep-name">prismatic/plumbing</td><td class="dotted"><hr /></td><td class="dep-version">0.0.1</td></tr><tr><td class="dep-name">digest</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">clj-http</td><td class="dotted"><hr /></td><td class="dep-version">0.6.3</td></tr><tr><td class="dep-name">com.cemerick/friend</td><td class="dotted"><hr /></td><td class="dep-version">0.1.2</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#shopify.auth">shopify.auth</a></li><li><a href="#shopify.friend">shopify.friend</a></li><li><a href="#shopify.resources">shopify.resources</a></li><li><a href="#shopify.resources.client">shopify.resources.client</a></li><li><a href="#shopify.resources.names">shopify.resources.names</a></li><li><a href="#shopify.resources.routes">shopify.resources.routes</a></li><li><a href="#shopify.util">shopify.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.auth" name="shopify.auth"><h1 class="project-name">shopify.auth</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns shopify.auth
   (:require [clojure.string :as str]
@@ -3048,10 +3048,10 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn user-auth-url
   [api-client shop &amp; [redirect-path]]
   (str &quot;https://&quot; shop &quot;/admin/oauth/authorize&quot;
-       &quot;?client_id=&quot; (api-client :key)
-       &quot;&amp;scope=&quot; (-&gt;&gt; (api-client :scope) (map name) (clojure.string/join &quot;,&quot;))
+       &quot;?client_id=&quot; (:key api-client)
+       &quot;&amp;scope=&quot; (-&gt;&gt; (:scope api-client) (map name) (clojure.string/join &quot;,&quot;))
        (when redirect-path
-         (str &quot;&amp;redirect_uri=&quot; (api-client :url) redirect-path))))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary code.
+         (str &quot;&amp;redirect_uri=&quot; (:url api-client) redirect-path))))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary code.
   Returns a request map for a POST to Shopify to get a permanent token</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-access-token-request
   [api-client shop code]
@@ -3126,7 +3126,12 @@ config key is <code>:api-client</code>. Optional keys are <code>:login-path</cod
       (cond (callback-request? request)
             (handle-callback-request api-client request)
             (login-request? request)
-            (handle-login-request api-client request callback-path)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources" name="shopify.resources"><h1 class="project-name">shopify.resources</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions for making requests against a shop's authenticated API.</p>
+            (handle-login-request api-client request callback-path)))))</pre></td></tr><tr><td class="docs"><p>Takes a ring request and returns a sequence of the current Shopify auth maps.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn shopify-auths
+  [request]
+  (-&gt;&gt; (get-in request [:session ::friend/identity :authentications])
+       vals
+       (filter #(= :shopify (::friend/workflow (meta %))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources" name="shopify.resources"><h1 class="project-name">shopify.resources</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions for making requests against a shop's authenticated API.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns shopify.resources
   (:use [shopify.resources.names :only [member-keyword
                                         collection-keyword]])
