@@ -3028,7 +3028,531 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>shopify -- Marginalia</title></head><body><table><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.names" name="shopify.resources.names"><h1 class="project-name">shopify.resources.names</h1><a class="toc-link" href="toc.html">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A few functions to help with resource type names.</p>
+</script><title>shopify -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">shopify</h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>A library for interacting with the Shopify platform.</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">org.flatland/useful</td><td class="dotted"><hr /></td><td class="dep-version">0.9.4</td></tr><tr><td class="dep-name">prismatic/plumbing</td><td class="dotted"><hr /></td><td class="dep-version">0.0.1</td></tr><tr><td class="dep-name">digest</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">clj-http</td><td class="dotted"><hr /></td><td class="dep-version">0.6.3</td></tr><tr><td class="dep-name">com.cemerick/friend</td><td class="dotted"><hr /></td><td class="dep-version">0.1.2</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#shopify.auth">shopify.auth</a></li><li><a href="#shopify.friend">shopify.friend</a></li><li><a href="#shopify.resources">shopify.resources</a></li><li><a href="#shopify.resources.client">shopify.resources.client</a></li><li><a href="#shopify.resources.names">shopify.resources.names</a></li><li><a href="#shopify.resources.routes">shopify.resources.routes</a></li><li><a href="#shopify.util">shopify.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.auth" name="shopify.auth"><h1 class="project-name">shopify.auth</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.auth
+  (:require [clojure.string :as str]
+            digest))</pre></td></tr><tr><td class="docs"><p>Uses your shared secret to verify that a signed map of query params is from Shopify.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn verify-params
+  [secret params]
+  (let [signature (:signature params)
+        params (dissoc params :signature)
+        join-keypair (comp (partial str/join &quot;=&quot;) (partial map name))
+        sorted-param-string (-&gt;&gt; params (map join-keypair) sort (str/join))]
+    (= signature
+       (digest/md5 (str secret sorted-param-string)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.friend" name="shopify.friend"><h1 class="project-name">shopify.friend</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Provides a workflow for <a href="https://github.com/cemerick/friend">friend</a>.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.friend
+  (:require [cemerick.friend :as friend]
+            [clj-http.client :as client]))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a shop domain, and a redirect path and returns
+  the URL where the user can grant access the api-client.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn user-auth-url
+  [api-client shop &amp; [redirect-path]]
+  (str &quot;https://&quot; shop &quot;/admin/oauth/authorize&quot;
+       &quot;?client_id=&quot; (api-client :key)
+       &quot;&amp;scope=&quot; (-&gt;&gt; (api-client :scope) (map name) (clojure.string/join &quot;,&quot;))
+       (when redirect-path
+         (str &quot;&amp;redirect_uri=&quot; (api-client :url) redirect-path))))</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary code.
+  Returns a request map for a POST to Shopify to get a permanent token</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-access-token-request
+  [api-client shop code]
+  {:method :post
+   :url    (str &quot;https://&quot; shop &quot;/admin/oauth/access_token&quot;)
+   :accept :json
+   :as     :json
+   :form-params {:client_id (api-client :key)
+                 :client_secret (api-client :secret)
+                 :code code}})</pre></td></tr><tr><td class="docs"><p>Takes an api-client map, a myshopify domain, and a temporary access code.
+  Fires off a POST to Shopify requesting a permanent token, which is
+  then returned.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn fetch-access-token
+  [api-client shop code]
+  (let [response (client/request (build-access-token-request api-client shop code))]
+    (get-in response [:body :access_token])))</pre></td></tr><tr><td class="docs"><p>Uses the temporary code from an auth callback to fetch a permanent
+  access token from Shopify and return it in an auth map.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-callback-request
+  [api-client request]
+  (let [shop (get-in request [:query-params &quot;shop&quot;])
+        code (get-in request [:query-params &quot;code&quot;])
+        access-token (fetch-access-token api-client shop code)]
+    (with-meta {:identity access-token
+                :access-token access-token
+                :shop shop}
+               {:type ::friend/auth
+                ::friend/workflow :shopify
+                ::friend/redirect-on-auth? true})))</pre></td></tr><tr><td class="docs"><p>Puts in the .myshopify.com if necessary.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn normalize-shop-domain
+  [domain]
+  (cond
+    (re-find #&quot;\.myshopify\.com\z&quot; domain)
+      domain
+    (re-find #&quot;\.shopify\.com\z&quot; domain)
+      (clojure.string/replace domain #&quot;\.shopify\.com\z&quot; &quot;.myshopify.com&quot;)
+    :else (str domain &quot;.myshopify.com&quot;)))</pre></td></tr><tr><td class="docs"><p>Returns a redirect response to the user auth URL for the shop
+  specified in the query params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-login-request
+  [api-client request callback-path]
+  (let [shop (normalize-shop-domain (get-in request
+                                            [:query-params &quot;shop&quot;]))]
+    (ring.util.response/redirect
+      (user-auth-url api-client shop callback-path))))</pre></td></tr><tr><td class="docs"><p>Returns whether or not the request is an auth callback, for a given
+  callback path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn callback-request-matcher
+  [callback-path request]
+  (and (= (request :uri) callback-path)
+       (contains? (request :query-params) &quot;code&quot;)
+       (contains? (request :query-params) &quot;shop&quot;)))</pre></td></tr><tr><td class="docs"><p>Returns whether or not the request is a login, for a given login path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn login-request-matcher
+  [login-path request]
+  (and (= (request :uri) login-path)
+       (contains? (request :query-params) &quot;shop&quot;)))</pre></td></tr><tr><td class="docs"><p>Takes a config map and returns a friend workflow. The only required
+config key is <code>:api-client</code>. Optional keys are <code>:login-path</code> (defaults to
+"/auth/shopify") and <code>:callback-path</code> (defaults to
+"/auth/shopify/callback"). Here's a typical config:</p>
+
+<pre><code>{:api-client
+ {:url "http://myapp.com"
+  :key "01abfc750a0c942167651c40d088531d"
+  :secret "dc2e817cb95adce7164db4767a13a53f"
+  :scope [:read_orders, :write_content]}
+ :login-path "/login"}
+</code></pre>
+</td><td class="codes"><pre class="brush: clojure">(defn workflow
+  [{:keys [api-client] :as config}]
+  (let [callback-path (get config :callback-path &quot;/auth/shopify/callback&quot;)
+        login-path (get config :login-path &quot;/auth/shopify&quot;)
+        callback-request? (partial callback-request-matcher callback-path)
+        login-request? (partial login-request-matcher login-path)]
+    (fn [request]
+      (cond (callback-request? request)
+            (handle-callback-request api-client request)
+            (login-request? request)
+            (handle-login-request api-client request callback-path)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources" name="shopify.resources"><h1 class="project-name">shopify.resources</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions for making requests against a shop's authenticated API.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.resources
+  (:use [shopify.resources.names :only [member-keyword
+                                        collection-keyword]])
+  (:require [shopify.resources.client :as client]
+            [shopify.resources.routes :as routes]
+            [flatland.useful.parallel :as parallel]
+            [plumbing.core :as plumbing]
+            clj-http.core))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def request
+  ^{:dynamic true
+    :doc &quot;Makes a request to the Shopify API, using `clj-http` with a custom middleware stack.&quot;}
+  (client/wrap-request clj-http.core/request))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- firstarg [x &amp; _] x)</pre></td></tr><tr><td class="docs"><p>Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. <code>{:id 99, :page {:title "foo"}}</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- attrs-to-params
+  [resource-type attrs]
+  (let [[scope-params attrs] (routes/extract-path-params resource-type attrs)
+        root-key (member-keyword resource-type)]
+    (if (empty? attrs)
+      scope-params
+      (assoc scope-params root-key attrs))))</pre></td></tr><tr><td class="docs"><p>Takes a keyword <code>resource-type</code> and a map of <code>attrs</code>, and returns a partial request map for creating a resource member.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti create-request
+  firstarg)
+(declare update-request)
+(defmethod create-request :assets
+  [_ attrs]
+  (update-request :assets attrs))
+(defmethod create-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (routes/endpoint resource-type :collection params)
+      :method :post)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get a collection of the given resource type with the given params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti get-list-request
+  firstarg)
+(defmethod get-list-request :default
+  [resource-type params]
+  (assoc (routes/endpoint resource-type :collection params)
+    :method :get))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get a member of the given resource with the given attributes.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti get-one-request
+  firstarg)
+(defn- default-get-one-request
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (routes/endpoint resource-type :member params)
+      :method :get)))
+(defmethod get-one-request :assets
+  [_ attrs]
+  (let [pk-keys (if (nil? (:theme_id attrs))
+                  #{:key}
+                  #{:theme_id :key})]
+    (default-get-one-request :assets (select-keys attrs pk-keys))))
+(defmethod get-one-request :default
+  [resource-type attrs]
+  (default-get-one-request resource-type attrs))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to update a member of the given resource with the given attributes.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti update-request
+  firstarg)
+(defmethod update-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (routes/endpoint resource-type :member params)
+      :method :put)))</pre></td></tr><tr><td class="docs"><p>Returns true if the given attributes appear to refer to a member which already exists on the server.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti persisted?
+  firstarg)
+(defmethod persisted? :assets
+  [resource-type attrs]
+  (contains? attrs :key))
+(defmethod persisted? :default
+  [resource-type attrs]
+  (contains? attrs :id))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def new?
+  ^{:doc &quot;Returns false if the given attributes appear to refer to a member which already exists on the server.&quot;}
+  (complement persisted?))</pre></td></tr><tr><td class="docs"><p>Delegates to <code>create-request</code> if the attributes are new, or <code>update-request</code> if they're persisted.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti save-request
+  firstarg)
+(defmethod save-request :default
+  [resource-type attrs]
+  (if (persisted? resource-type attrs)
+    (update-request resource-type attrs)
+    (create-request resource-type attrs)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to delete a resource member.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti delete-request
+  firstarg)
+(defmethod delete-request :default
+  [resource-type attrs]
+  (let [params (attrs-to-params resource-type attrs)]
+    (assoc (routes/endpoint resource-type :member params)
+      :method :delete)))</pre></td></tr><tr><td class="docs"><p>Returns a partial request map to get the count of the given resource/params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-count-request
+  [resource-type params]
+  (get-list-request resource-type (assoc params :action :count)))</pre></td></tr><tr><td class="docs"><p>Takes a response map and returns the collection of the given type, if it is present.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- extract-collection
+  [response resource-type]
+  (get-in response [:body (collection-keyword resource-type)]))</pre></td></tr><tr><td class="docs"><p>Takes a response map and returns the member of the given type, if it is present.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- extract-member
+  [response resource-type]
+  (get-in response [:body (member-keyword resource-type)]))</pre></td></tr><tr><td class="docs"><p>A convenience macro to define the same base request options for any request to the Shopify API. <code>opts</code> would most often be an auth map, but it could include any default options for the request.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmacro with-opts
+  [opts &amp; exprs]
+  `(binding [client/*base-request-opts* ~opts]
+     ~@exprs))</pre></td></tr><tr><td class="docs"><p>Used by the kicker functions to parse argument lists. The most verbose form takes a resource type keyword, a map of either params or attributes, and a map of request options:</p>
+
+<pre><code>(def auth {:shop "foo.myshopify.com"
+           :access-token "70bc2f19efa5129f202e661ac6fd38f3"})
+(get-list :products {:limit 2} auth)
+</code></pre>
+
+<p>If you only provide one map, it's assumed to be the params/attributes, so you'll need to provide authentication with <code>with-opts</code>:</p>
+
+<pre><code>(with-opts auth
+  (get-list :products {:limit 2}))
+</code></pre>
+
+<p>If you don't give a keyword as the first argument, the function will look for the resource type under a <code>:shopify.resources/type</code> key in the params/attributes map. This key is present in all resource attribute maps returned by the library, so you can chain together reading and writing operations conveniently like so:</p>
+
+<pre><code>(with-opts auth
+  (-&gt; (get-one :page {:id 99})
+      (update-in [:title]
+                 clojure.string/upper-case)
+      (update-in [:body-html]
+                 #(clojure.string/replace % "." "!"))
+      save!))
+</code></pre>
+</td><td class="codes"><pre class="brush: clojure">(defn extract-kicker-args
+  [args]
+  (let [[params request-opts] (filter map? args)
+        params (or params {})
+        resource-type (if (keyword? (first args))
+                        (first args)
+                        (:shopify.resources/type params))]
+    [resource-type params request-opts]))</pre></td></tr><tr><td class="docs"><p>Takes a request-building function and a value-extracting function, and returns a function which actually performs the request.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- kicker-fn
+  [request-fn extract-fn]
+  (fn [&amp; args]
+    (let [[resource-type params request-opts] (extract-kicker-args args)
+          response (request (merge (request-fn resource-type params)
+                                   request-opts))]
+      (extract-fn response resource-type))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def get-list
+  ^{:doc &quot;Performs a GET request for a resource collection, returning a sequence of attribute maps. See `extract-kicker-args` for the available argument forms.&quot;}
+  (kicker-fn get-list-request
+             extract-collection))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def get-one
+  ^{:doc &quot;Performs a GET request for a resource member, returning a map of attributes.&quot;}
+  (kicker-fn get-one-request
+             extract-member))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def get-count
+  ^{:doc &quot;Performs a GET request for the count of a resource collection, returning a `java.lang.Long`.&quot;}
+  (kicker-fn get-count-request
+             (fn [response _] (get-in response [:body :count]))))</pre></td></tr><tr><td class="docs"><p>A convenience function to get the singleton shop resource.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-shop
+  [&amp; [request-opts]]
+  (get-one :shop {} request-opts))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def save!
+  ^{:doc &quot;Performs either a POST or a PUT to save the given attributes.&quot;}
+  (kicker-fn save-request
+             extract-member))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def delete!
+  ^{:doc &quot;Performs a DELETE on the given resource.&quot;}
+  (kicker-fn delete-request
+             extract-member))</pre></td></tr><tr><td class="docs"><p>Eagerly gets <em>all</em> the resources described by the arguments in parallel. Returns a sequence which is a lazy concatenation of all pages.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-all
+  [&amp; args]
+  (let [[resource-type params request-opts] (extract-kicker-args args)
+        resource-count (get-count resource-type
+                                  params
+                                  request-opts)
+        page-size 250
+        page-count (-&gt; (/ resource-count page-size) Math/ceil int)
+        page-numbers (range 1 (+ 1 page-count))
+        get-page (fn [n]
+                   (get-list resource-type
+                             (assoc params
+                               :limit page-size
+                               :page n)
+                             request-opts))
+        pages (parallel/pcollect get-page
+                                 page-numbers)]
+    (plumbing/aconcat pages)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.client" name="shopify.resources.client"><h1 class="project-name">shopify.resources.client</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A custom middleware stack to make Shopify API requests with clj-http.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.resources.client
+  (:use [shopify.util :only [as-namespaced-str
+                             dashes-&gt;underscores
+                             underscores-&gt;dashes]]
+        [shopify.resources.names :only [member-keyword]])
+  (:require [clojure.string :as str]
+            [clojure.walk :as walk]
+            clj-http.client
+            clj-http.links
+            clj-http.util))</pre></td></tr><tr><td class="docs"><p>Builds Rails-style nested query strings from param maps.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn params-&gt;query-string
+  [data &amp; [prefix]]
+  (cond
+    (sequential? data)
+    (-&gt;&gt; data
+         (map (fn [item]
+                (params-&gt;query-string
+                  item
+                  (str prefix &quot;[]&quot;))))
+         (str/join \&amp;))
+    (map? data)
+    (-&gt;&gt; data
+         (map (fn [[k v]]
+                (params-&gt;query-string
+                  v
+                  (let [k (clj-http.util/url-encode (name k))]
+                    (if prefix (str prefix \[ k \]) k)))))
+         (str/join \&amp;))
+    data
+    (-&gt;&gt; (as-namespaced-str data)
+         clj-http.util/url-encode
+         (str prefix (when prefix \=)))
+    :else
+    prefix))</pre></td></tr><tr><td class="docs"><p>Middleware which converts a <code>:query-params</code> map into a Rails-style nested <code>:query-string</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-query-params
+  [client]
+  (fn [{:keys [query-params] :as req}]
+    (if query-params
+      (client (-&gt; req
+                  (dissoc :query-params)
+                  (assoc
+                    :query-string
+                    (params-&gt;query-string query-params))))
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware which forces JSON for everything, and appends <code>.json</code> to paths if it isn't already there.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-json-format
+  [client]
+  (fn [req]
+    (let [req (assoc req
+                :accept :json
+                :as :json
+                :content-type :json)]
+      (if-let [uri (:uri req)]
+        (client (assoc req :uri (str/replace uri #&quot;(?&lt;!\.json)$&quot; &quot;.json&quot;)))
+        (client req)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn prepare-oauth2-request
+  [req]
+  (-&gt; req
+      (dissoc :access-token)
+      (assoc-in [:headers &quot;x-shopify-access-token&quot;]
+                (:access-token req))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn prepare-basic-auth-request
+  [req]
+  (-&gt; req
+      (dissoc :api-key :password)
+      (assoc :basic-auth [(:api-key req) (:password req)])))</pre></td></tr><tr><td class="docs"><p>If <code>:access-token</code> is present in the request, converts it into the appropriate auth header. Otherwise it looks for <code>:api-key</code> and <code>:password</code> to use basic auth.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-auth
+  [client]
+  (fn [req]
+    (cond
+      (contains? req :access-token)
+        (client (prepare-oauth2-request req))
+      (and (contains? req :api-key)
+           (contains? req :password))
+        (client (prepare-basic-auth-request req))
+      :else
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware defaulting requests to SSL.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-ssl
+  [client]
+  (fn [req]
+    (if-let [scheme (:scheme req)]
+      (client req)
+      (client (-&gt; req
+                  (assoc :scheme :https))))))</pre></td></tr><tr><td class="docs"><p>Middleware converting a <code>:shop</code> option into <code>:server-name</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-shop
+  [client]
+  (fn [req]
+    (if-let [shop (:shop req)]
+      (client (-&gt; req
+                  (dissoc :shop)
+                  (assoc :server-name shop)))
+      (client req))))</pre></td></tr><tr><td class="docs"><p>Middleware which retries a request if it's being throttled.</p>
+
+<p>Request options:</p>
+
+<ul>
+<li><code>:retry-on-throttle-errors</code>: whether to retry throttled requests (default <code>true</code>)</li>
+<li><code>:throttle-retry-delay</code>: how many seconds to wait between throttle retries (default <code>60</code>)</li>
+<li><code>:max-throttle-retries</code>: how many times to retry before giving up and returning the error response (default <code>12</code>)</li>
+</ul>
+
+<p>In the response:</p>
+
+<ul>
+<li><code>:throttle-retry-count</code>: number of retries (key is absent when there were no retries)</li>
+</ul>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-retry-on-throttle-errors
+  [client]
+  (fn [req]
+    (if (= false (:retry-on-throttle-errors req))
+      (client req)
+      (let [wait-seconds (:throttle-retry-delay req 60)
+            max-retries (:max-throttle-retries req 12)]
+        (loop [retries 0]
+          (let [response (client req)]
+            (if (or
+                  (not= 429 (:status response))
+                  (= retries max-retries))
+              (if (= retries 0)
+                response
+                (assoc response :throttle-retry-count retries))
+              (do
+                (Thread/sleep (* wait-seconds 1000))
+                (recur (+ 1 retries))))))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn convert-keywords
+  [data convert-fn]
+  (clojure.walk/postwalk #(if (keyword? %)
+                            (keyword (convert-fn %))
+                            %)
+                         data))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-underscored-request-params
+  [client]
+  (fn [req]
+    (let [all-params (select-keys req #{:query-params :form-params})
+          all-underscored-params
+          (into {}
+                (map (fn [[k params]]
+                       [k (convert-keywords params
+                                            dashes-&gt;underscores)])
+                all-params))]
+      (client (merge req all-underscored-params)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-dasherized-response
+  [client]
+  (fn [req]
+    (let [response (client req)]
+      (assoc response
+        :body (convert-keywords (:body response)
+                                underscores-&gt;dashes)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- assoc-type
+  [k m]
+  (if (map? m)
+    (assoc m :shopify.resources/type (member-keyword k))
+    m))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- insert-types
+  [[k v]]
+  (cond
+    (map? v) [k (assoc-type k v)]
+    (sequential? v) [k (vec (map (partial assoc-type k) v))]
+    :else [k v]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn embed-resource-types
+  [data]
+  (walk/postwalk #(if (map? %)
+                    (into {} (map insert-types %))
+                    %)
+                 data))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-embed-resource-types-in-response
+  [client]
+  (fn [req]
+    (let [response (client req)]
+      (assoc response :body (embed-resource-types (:body response))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn remove-namespaced-keys
+  [data]
+  (walk/postwalk #(if (map? %)
+                    (into {} (remove (comp namespace key) %))
+                    %)
+                 data))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-remove-namespaced-keys-from-request-params
+  [client]
+  (fn [req]
+    (let [all-params (select-keys req #{:query-params :form-params})
+          all-stripped-params (remove-namespaced-keys all-params)]
+      (client (merge req all-stripped-params)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def ^:private query-string-methods
+  #{:get :head :delete})</pre></td></tr><tr><td class="docs"><p>Middleware which renames <code>:params</code> to <code>:query-params</code> when method is GET, HEAD, or DELETE. For other methods, <code>:params</code> becomes <code>:form-params</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-generic-params-key
+  [client]
+  (fn [req]
+    (if-let [params (:params req)]
+      (if (query-string-methods (keyword (:request-method req)))
+        (client (-&gt; req
+                    (dissoc :params)
+                    (assoc :query-params params)))
+        (client (-&gt; req
+                    (dissoc :params)
+                    (assoc :form-params params))))
+      (client req))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn attach-response-to-resource-metadata
+  [response]
+  (let [body-with-meta
+        (walk/postwalk #(if (map? %)
+                          (with-meta % {:shopify.resources/response response})
+                          %)
+                       (:body response))]
+    (assoc response :body body-with-meta)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def wrap-attach-response-to-resource-metadata
+  (partial comp attach-response-to-resource-metadata))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *base-request-opts* nil)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-base-request-opts
+  [client]
+  (fn [req]
+    (client (merge *base-request-opts* req))))</pre></td></tr><tr><td class="docs"><p>Wraps a request function with an appropriate stack of middleware.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn wrap-request
+  [request]
+  (-&gt; request
+      clj-http.client/wrap-request-timing
+      wrap-retry-on-throttle-errors
+      clj-http.client/wrap-lower-case-headers
+      ; clj-http.client/wrap-query-params
+      wrap-query-params
+      clj-http.client/wrap-basic-auth
+      ; clj-http.client/wrap-oauth
+      ; clj-http.client/wrap-user-info
+      ; clj-http.client/wrap-url
+      ; clj-http.client/wrap-redirects
+      clj-http.client/wrap-decompression
+      clj-http.client/wrap-input-coercion
+      ; put this before output-coercion, so additional charset
+      ; headers can be used if desired
+      clj-http.client/wrap-additional-header-parsing
+      clj-http.client/wrap-output-coercion
+      clj-http.client/wrap-exceptions
+      clj-http.client/wrap-accept
+      clj-http.client/wrap-accept-encoding
+      clj-http.client/wrap-content-type
+      clj-http.client/wrap-form-params
+      ; clj-http.client/wrap-nested-params
+      wrap-embed-resource-types-in-response
+      wrap-remove-namespaced-keys-from-request-params
+      wrap-dasherized-response
+      wrap-underscored-request-params
+      wrap-generic-params-key
+      clj-http.client/wrap-method
+      ; clj-http.cookies/wrap-cookies
+      clj-http.links/wrap-links
+      ; clj-http.client/wrap-unknown-host
+      wrap-json-format
+      wrap-auth
+      wrap-shop
+      wrap-ssl
+      wrap-attach-response-to-resource-metadata
+      wrap-base-request-opts))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.names" name="shopify.resources.names"><h1 class="project-name">shopify.resources.names</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A few functions to help with resource type names.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns shopify.resources.names
   (:require [clojure.string :as str]
             [shopify.util :as util]))</pre></td></tr><tr><td class="docs"><p>Converts resource keywords to their plural forms, unless it's a singleton resource (e.g. <code>:shop</code>).</p>
@@ -3046,5 +3570,192 @@ net.brehaut.ClojureTools = (function (SH) {
     (case resource
       (&quot;country&quot; &quot;countries&quot;) &quot;country&quot;
       (str/replace-first resource #&quot;s?$&quot; &quot;&quot;))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def member-keyword (comp keyword member-name))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+</td><td class="codes"><pre class="brush: clojure">(def member-keyword (comp keyword member-name))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.resources.routes" name="shopify.resources.routes"><h1 class="project-name">shopify.resources.routes</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions to determine the endpoint of a resource. You probably don't need to use these; use the <code>shopify.resources</code> namespace to make requests.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.resources.routes
+  (:use [shopify.resources.names :only [collection-name collection-keyword]])
+  (:require [clojure.string :as str]
+            [clojure.set :as set]
+            [shopify.util :as util]
+            clj-http.util))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def path-params
+  ^{:doc &quot;Takes a route template like `\&quot;/admin/blogs/:blog_id/articles\&quot;` and returns a set of dynamic segments as keywords like `#{:blog_id}`.&quot;}
+  (memoize (fn path-params [route]
+             (-&gt;&gt; (re-seq #&quot;(?&lt;=:)\w+&quot; route)
+                  (map keyword)
+                  set))))</pre></td></tr><tr><td class="docs"><p>Pick the first satisfyable route template in a collection, given a collection of available keys.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn pick-route
+  [routes params]
+  (let [available-keys (-&gt;&gt; params
+                            (filter #(not (nil? (val %))))
+                            (map first)
+                            set)]
+    (some #(let [unfilled-segments (set/difference (path-params %)
+                                                   (set available-keys))]
+             (when (empty? unfilled-segments) %))
+          routes)))</pre></td></tr><tr><td class="docs"><p>Given a route template and a map of params, return a partial request map of <code>:uri</code> and <code>:params</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn render-route
+  [route params]
+  (let [dynamic-segments (path-params route)
+        reducer (fn [req [k v :as param]]
+                  (if (dynamic-segments k)
+                    (assoc req
+                      :uri (str/replace-first
+                             (:uri req)
+                             (re-pattern (str k &quot;(?=$|\\/)&quot;))
+                             (clj-http.util/url-encode (util/as-namespaced-str v))))
+                    (assoc-in req [:params k] v)))]
+    (reduce reducer
+            {:uri route}
+            params)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- collection-route
+  ([resource]
+    (collection-route resource &quot;/admin&quot;))
+  ([resource prefix]
+    (str prefix \/ (collection-name resource))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- collection-action-route
+  ([resource]
+    (collection-action-route resource &quot;/admin&quot;))
+  ([resource prefix]
+    (str (collection-route resource prefix) &quot;/:action&quot;)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- member-route
+  ([resource]
+    (member-route resource &quot;/admin&quot;))
+  ([resource prefix]
+    (str (collection-route resource prefix) &quot;/:id&quot;)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- member-action-route
+  ([resource]
+    (member-action-route resource &quot;/admin&quot;))
+  ([resource prefix]
+    (str (collection-route resource prefix) &quot;/:id/:action&quot;)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- prefixed-collection-routes
+  [resource prefix]
+  (list (collection-action-route resource prefix)
+        (collection-route resource prefix)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- prefixed-member-routes
+  [resource prefix]
+  (list (member-action-route resource prefix)
+        (member-route resource prefix)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- shallow-collection-routes
+  [resource]
+  (prefixed-collection-routes resource &quot;/admin&quot;))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- shallow-member-routes
+  [resource]
+  (prefixed-member-routes resource &quot;/admin&quot;))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- prefixed-and-shallow-collection-routes
+  [resource prefix]
+  (concat (prefixed-collection-routes resource prefix)
+          (shallow-collection-routes resource)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- prefixed-and-shallow-member-routes
+  [resource prefix]
+  (concat (prefixed-member-routes resource prefix)
+          (shallow-member-routes resource)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- prefixed-and-shallow-routes
+  [resource prefix]
+  {:collection (prefixed-and-shallow-collection-routes resource prefix)
+   :member (prefixed-and-shallow-member-routes resource prefix)})</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def resource-types
+  {:articles
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :articles &quot;/admin/blogs/:blog_id&quot;)}}
+   :assets
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :assets &quot;/admin/themes/:theme_id&quot;)
+     :member (prefixed-and-shallow-collection-routes
+               :assets &quot;/admin/themes/:theme_id&quot;)}}
+   :customers
+   {:routes
+    {:collection (prefixed-and-shallow-collection-routes
+                   :customers &quot;/admin/customer_groups/:customer_group_id&quot;)}}
+   :events
+   {:routes (prefixed-and-shallow-routes
+              :events &quot;/admin/:resource/:resource_id&quot;)}
+   :fulfillments
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :fulfillments &quot;/admin/orders/:order_id&quot;)}}
+   :metafields
+   {:routes (prefixed-and-shallow-routes
+              :metafields &quot;/admin/:resource/:resource_id&quot;)}
+   :images
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :images &quot;/admin/products/:product_id&quot;)}}
+   :variants
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :variants &quot;/admin/products/:product_id&quot;)}}
+   :provinces
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :provinces &quot;/admin/countries/:country_id&quot;)}}
+   :shop
+   {:routes
+    {:collection (shallow-collection-routes :shop)
+     :member (shallow-collection-routes :shop)}}
+   :transactions
+   {:routes
+    {:collection (prefixed-collection-routes
+                   :transactions &quot;/admin/orders/:order_id&quot;)}}})</pre></td></tr><tr><td class="docs"><p>Takes a resource type keword (e.g. <code>:products</code>) and cardinality (<code>:member</code> or <code>:collection</code>) and returns a sequence of routes.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn routes-for-resource
+  [resource-type cardinality]
+  (let [resource-type (collection-keyword resource-type)]
+    (or (get-in resource-types [resource-type :routes cardinality])
+        (if (= :member cardinality)
+          (shallow-member-routes resource-type)
+          (shallow-collection-routes resource-type)))))</pre></td></tr><tr><td class="docs"><p>Takes a resource type keword (e.g. <code>:products</code>), a cardinality (<code>:member</code> or <code>:collection</code>), and a map of params. Returns a partial request map of <code>:uri</code> and <code>:params</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn endpoint
+  [resource-type cardinality params]
+  (-&gt; (routes-for-resource resource-type cardinality)
+      (pick-route params)
+      (render-route params)))</pre></td></tr><tr><td class="docs"><p>Takes a resource type keyword and a map of member attributes, and returns a possibly altered map suitable for extracting path params.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti prepare-path-params
+  (fn [resource-type attrs] resource-type))
+(defmethod prepare-path-params :default
+  [_ attrs]
+  attrs)
+(defn transform-parent-resource-attrs
+  [attrs]
+  (let [renamed-attrs (set/rename-keys attrs {:owner_resource :resource
+                                              :owner_id :resource_id})
+        resource (:resource renamed-attrs)]
+    (if (string? resource)
+      (assoc renamed-attrs :resource (collection-name resource))
+      renamed-attrs)))
+(defmethod prepare-path-params :events
+  [_ attrs] (transform-parent-resource-attrs attrs))
+(defmethod prepare-path-params :metafields
+  [_ attrs] (transform-parent-resource-attrs attrs))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def path-param-keys-for-resource
+  ^{:doc &quot;Returns a set of all the &quot;}
+  (memoize (fn path-param-keys-for-resource
+             [resource-type]
+             (let [routes (mapcat (partial routes-for-resource resource-type)
+                                  [:collection :member])]
+               (into #{} (mapcat path-params routes))))))</pre></td></tr><tr><td class="docs"><p>Takes a resource type-keyword and a map of member attributes, and returns a map of path params and a map of the remaining attributes</p>
+</td><td class="codes"><pre class="brush: clojure">(defn extract-path-params
+  [resource-type member-attrs]
+  (util/partition-keys (prepare-path-params resource-type member-attrs)
+                  (path-param-keys-for-resource resource-type)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#shopify.util" name="shopify.util"><h1 class="project-name">shopify.util</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns shopify.util
+  (:require [clojure.string :as str]))</pre></td></tr><tr><td class="docs"><p>Returns the name of a keyword, or the string value of anything else.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn as-namespaced-str
+  [x]
+  (if (keyword? x)
+    (subs (str x) 1)
+    (str x)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn dashes-&gt;underscores
+  [string]
+  (str/replace (as-namespaced-str string) &quot;-&quot; &quot;_&quot;))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn underscores-&gt;dashes
+  [string]
+  (str/replace (as-namespaced-str string) &quot;_&quot; &quot;-&quot;))</pre></td></tr><tr><td class="docs"><p>Takes a map and a predicate and returns two maps split by which keys satisfy the predicate</p>
+</td><td class="codes"><pre class="brush: clojure">(defn partition-keys
+  [m pred]
+  (reduce (fn [result [k v]]
+            (let [i (if (pred k) 0 1)]
+              (assoc-in result [i k] v)))
+          [{} {}]
+          m))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>
