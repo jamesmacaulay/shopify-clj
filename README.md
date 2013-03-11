@@ -5,12 +5,16 @@ A [Clojure][clojure] library for interacting with the [Shopify][shopify] platfor
 * `shopify.resources`: functions for interacting with [a shop's resources][resource-docs].
 * `shopify.friend`: provides a [friend][friend] workflow to authenticate [ring][ring] apps with Shopify shops using [OAuth2][auth-docs].
 
+There is [documentation][codox-docs] and [annotated source][marginalia-docs].
+
 [clojure]: http://clojure.org
 [shopify]: http://www.shopify.com/
 [resource-docs]: http://docs.shopify.com/api
 [ring]: https://github.com/ring-clojure/ring
 [friend]: https://github.com/cemerick/friend
 [auth-docs]: http://docs.shopify.com/api/tutorials/oauth
+[codox-docs]: http://jamesmacaulay.github.com/shopify-clj/docs/codox/index.html
+[marginalia-docs]: http://jamesmacaulay.github.com/shopify-clj/docs/marginalia/uberdoc.html
 
 ## Installation
 
