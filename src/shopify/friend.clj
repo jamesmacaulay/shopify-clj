@@ -8,10 +8,10 @@
   the URL where the user can grant access the api-client."
   [api-client shop & [redirect-path]]
   (str "https://" shop "/admin/oauth/authorize"
-       "?client_id=" (api-client :key)
-       "&scope=" (->> (api-client :scope) (map name) (clojure.string/join ","))
+       "?client_id=" (:key api-client)
+       "&scope=" (->> (:scope api-client) (map name) (clojure.string/join ","))
        (when redirect-path
-         (str "&redirect_uri=" (api-client :url) redirect-path))))
+         (str "&redirect_uri=" (:url api-client) redirect-path))))
 
 (defn build-access-token-request
   "Takes an api-client map, a myshopify domain, and a temporary code.
@@ -104,3 +104,10 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
             
             (login-request? request)
             (handle-login-request api-client request callback-path)))))
+
+(defn shopify-auths
+  "Takes a ring request and returns a sequence of the current Shopify auth maps."
+  [request]
+  (->> (get-in request [:session ::friend/identity :authentications])
+       vals
+       (filter #(= :shopify (::friend/workflow (meta %))))))

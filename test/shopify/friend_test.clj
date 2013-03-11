@@ -115,3 +115,20 @@
     (is (= "foo.myshopify.com"
            (normalize-shop-domain "foo.shopify.com"))))))
 
+(deftest shopify-auths-test
+  (testing "shopify-auths takes a ring request and only returns the auth maps from shopify.friend"
+    (let [shopify-auth (with-meta {:identity "mock-access-token"
+                                   :access-token "mock-access-token"
+                                   :shop "foo.myshopify.com"}
+                                  {:type :cemerick.friend/auth
+                                   :cemerick.friend/workflow :shopify})
+          other-auth (with-meta {:identity "james@shopify.com"}
+                                {:type :cemerick.friend/auth
+                                 :cemerick.friend/workflow :interactive-form})]
+      (is (= [shopify-auth]
+             (shopify-auths
+               {:session
+                {:cemerick.friend/identity
+                 {:authentications {"mock-access-token" shopify-auth
+                                    "james@shopify.com" other-auth}}}}))))))
+
