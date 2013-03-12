@@ -111,3 +111,8 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
   (->> (get-in request [:session ::friend/identity :authentications])
        vals
        (filter #(= :shopify (::friend/workflow (meta %))))))
+
+(defn logged-in?
+  "Tells you whether or not there's an active Shopify authentication for this request."
+  [request]
+  (not (empty? (shopify-auths request))))
