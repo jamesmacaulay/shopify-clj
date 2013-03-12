@@ -152,6 +152,6 @@ This returns a sequence of auth maps which can be used as the basis of shop reso
 
 ## License
 
-Copyright © 2012-2013 James MacAulay & Shopify
+Copyright © 2012-2013
 
 Distributed under the Eclipse Public License, the same as Clojure.

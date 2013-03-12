@@ -16,4 +16,4 @@ Once the server is running, a browser window should open automatically on http:/
 
 ## License
 
-Copyright © 2013 James MacAulay
+Copyright © 2013
