@@ -23,7 +23,7 @@ Shopify artifacts are [released to Clojars][clojars-shopify].
 [Leiningen][leiningen] is the way to go for managing dependencies in Clojure. Add the following dependency to your `project.clj`:
 
 ```
-:dependencies [[shopify "0.1.0"]]
+:dependencies [[shopify "0.1.1"]]
 ```
 
 [clojars-shopify]: https://clojars.org/shopify/shopify
