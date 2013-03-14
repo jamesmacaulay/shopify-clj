@@ -8,7 +8,7 @@
                  [prismatic/plumbing "0.0.1"]
                  [digest "1.4.0"]
                  [clj-http "0.6.3"]
-                 [com.cemerick/friend "0.1.2"]]
+                 [com.cemerick/friend "0.1.3"]]
   :profiles {:dev {:dependencies [[ring-mock "0.1.3"]
                                   [org.clojure/clojure "1.4.0"]]}
              :1.5 {:dependencies [[org.clojure/clojure "1.5.0"]]}}
