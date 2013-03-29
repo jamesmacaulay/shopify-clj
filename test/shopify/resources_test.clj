@@ -188,3 +188,12 @@
   (testing "extract-kicker-args defaults params to {}"
     (is (= [nil {} nil]
            (extract-kicker-args [])))))
+
+(deftest sized-image-test
+  (testing "sized-image takes a shopify image URL and puts the size in the right place"
+    (is (= "http://cdn.shopify.com/s/files/1/0001/8392/products/hammer_large.jpg?46"
+           (sized-image "http://cdn.shopify.com/s/files/1/0001/8392/products/hammer.jpg?46"
+                        "large")))
+    (is (= "http://cdn.shopify.com/s/files/1/0001/8392/products/foo_bar_baz_small.jpg?46"
+           (sized-image "http://cdn.shopify.com/s/files/1/0001/8392/products/foo_bar_baz.jpg?46"
+                        "small")))))

@@ -213,3 +213,6 @@ If you don't give a keyword as the first argument, the function will look for th
                                  page-numbers)]
     (plumbing/aconcat pages)))
 
+(defn sized-image [url size]
+  (clojure.string/replace url #"\/([^\/\.\?]+)([^\/\?]+)(\?.*)?$" (str "/$1_" size "$2$3")))
+
