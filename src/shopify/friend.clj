@@ -108,7 +108,9 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
 (defn shopify-auths
   "Takes a ring request and returns a sequence of the current Shopify auth maps."
   [request]
-  (->> (get-in request [:session ::friend/identity :authentications])
+  (->> request
+       friend/identity
+       :authentications
        vals
        (filter #(= :shopify (::friend/workflow (meta %))))))
 
