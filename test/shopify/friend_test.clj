@@ -124,26 +124,59 @@
       other-auth (with-meta {:identity "james@shopify.com"}
                             {:type :cemerick.friend/auth
                              :cemerick.friend/workflow :interactive-form})]
+  (deftest shopify-auth?-test
+    (testing "shopify-auth? returns true for a shopify authentication"
+      (is (= true
+             (shopify-auth? shopify-auth))))
+    (testing "shopify-auth? returns false for a non-shopify authentication"
+      (is (= false
+             (shopify-auth? other-auth)))))
   (deftest shopify-auths-test
     (testing "shopify-auths takes a ring request and only returns the auth maps from shopify.friend"
-        (is (= [shopify-auth]
-               (shopify-auths
-                 {:session
-                  {:cemerick.friend/identity
-                   {:authentications {"mock-access-token" shopify-auth
-                                      "james@shopify.com" other-auth}}}})))))
+      (is (= [shopify-auth]
+             (shopify-auths
+               {:session
+                {:cemerick.friend/identity
+                 {:current "mock-access-token"
+                  :authentications {"mock-access-token" shopify-auth
+                                    "james@shopify.com" other-auth}}}})))))
   (deftest logged-in?-test
     (testing "logged-in? returns true if the given request has a shopify auth map"
-        (is (= true
-               (logged-in?
-                 {:session
-                  {:cemerick.friend/identity
-                   {:authentications {"mock-access-token" shopify-auth
-                                      "james@shopify.com" other-auth}}}}))))
+      (is (= true
+             (logged-in?
+               {:session
+                {:cemerick.friend/identity
+                 {:current "mock-access-token"
+                  :authentications {"mock-access-token" shopify-auth
+                                    "james@shopify.com" other-auth}}}}))))
     (testing "logged-in? returns false if the given request has no shopify auth map"
-        (is (= false
-               (logged-in?
-                 {:session
-                  {:cemerick.friend/identity
-                   {:authentications {"james@shopify.com" other-auth}}}}))))))
-
+      (is (= false
+             (logged-in?
+               {:session
+                {:cemerick.friend/identity
+                 {:current "james@shopify.com"
+                  :authentications {"james@shopify.com" other-auth}}}})))))
+  (deftest current-authentication-test
+    (testing "current-authentication returns nil when there is only a non-shopify auth map present"
+      (is (= nil
+             (current-authentication
+               {:session
+                {:cemerick.friend/identity
+                 {:current "james@shopify.com"
+                  :authentications {"james@shopify.com" other-auth}}}}))))
+    (testing "current-authentication returns the current authentication when it is a shopify auth"
+      (is (= shopify-auth
+             (current-authentication
+               {:session
+                {:cemerick.friend/identity
+                 {:current "mock-access-token"
+                  :authentications {"mock-access-token" shopify-auth
+                                    "james@shopify.com" other-auth}}}}))))
+    (testing "current-authentication returns the first shopify auth when a non-shopify auth is the current one"
+      (is (= shopify-auth
+             (current-authentication
+               {:session
+                {:cemerick.friend/identity
+                 {:current "james@shopify.com"
+                  :authentications {"mock-access-token" shopify-auth
+                                    "james@shopify.com" other-auth}}}}))))))

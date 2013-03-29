@@ -105,6 +105,11 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
             (login-request? request)
             (handle-login-request api-client request callback-path)))))
 
+(defn shopify-auth?
+  "Tells you if a friend auth is from shopify"
+  [auth-map]
+  (-> auth-map meta ::friend/workflow (= :shopify)))
+
 (defn shopify-auths
   "Takes a ring request and returns a sequence of the current Shopify auth maps."
   [request]
@@ -112,9 +117,17 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
        friend/identity
        :authentications
        vals
-       (filter #(= :shopify (::friend/workflow (meta %))))))
+       (filter shopify-auth?)))
 
 (defn logged-in?
   "Tells you whether or not there's an active Shopify authentication for this request."
   [request]
   (not (empty? (shopify-auths request))))
+
+(defn current-authentication
+  "Returns the current friend authentication if it's from Shopify, otherwise the first shopify auth available"
+  [request]
+  (if-let [current-auth (friend/current-authentication request)]
+    (if (shopify-auth? current-auth)
+      current-auth
+      (first (shopify-auths request)))))
