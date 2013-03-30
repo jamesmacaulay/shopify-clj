@@ -1,7 +1,8 @@
 (ns shopify.friend
   "Provides a workflow for [friend](https://github.com/cemerick/friend)."
   (:require [cemerick.friend :as friend]
-            [clj-http.client :as client]))
+            [clj-http.client :as client]
+            [shopify.resources :as shop]))
 
 (defn user-auth-url
   "Takes an api-client map, a shop domain, and a redirect path and returns
@@ -131,3 +132,10 @@ config key is `:api-client`. Optional keys are `:login-path` (defaults to
     (if (shopify-auth? current-auth)
       current-auth
       (first (shopify-auths request)))))
+
+(defn wrap-current-authentication-for-shopify-resources
+  "Ring middleware to set up a dynamic auth binding for shopify.resources"
+  [handler]
+  (fn [request]
+    (shop/with-opts (current-authentication request)
+                    (handler request))))

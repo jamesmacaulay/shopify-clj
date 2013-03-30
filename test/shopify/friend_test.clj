@@ -2,7 +2,8 @@
   (:use clojure.test
         shopify.friend
         [ring.mock.request :only [request]]
-        [ring.middleware.params :only [wrap-params]]))
+        [ring.middleware.params :only [wrap-params]])
+  (:require [shopify.resources.client]))
 
 (def default-api-client
   {:url "http://shopify-test.heroku.com"
@@ -179,4 +180,16 @@
                 {:cemerick.friend/identity
                  {:current "james@shopify.com"
                   :authentications {"mock-access-token" shopify-auth
-                                    "james@shopify.com" other-auth}}}}))))))
+                                    "james@shopify.com" other-auth}}}})))))
+  (deftest wrap-current-authentication-for-shopify-resources-test
+    (testing "binds shopify.resources.client/*base-request-opts* with current authentication"
+      (let [wrapped-base-request-opts
+            (wrap-current-authentication-for-shopify-resources
+              (fn [req] shopify.resources.client/*base-request-opts*))]
+        (is (= shopify-auth
+               (wrapped-base-request-opts
+                 {:session
+                  {:cemerick.friend/identity
+                   {:current "mock-access-token"
+                    :authentications {"mock-access-token" shopify-auth
+                                      "james@shopify.com" other-auth}}}})))))))
