@@ -1,5 +1,8 @@
 # shopify-clj
 
+
+[![Dependencies Status](https://jarkeeper.com/jamesmacaulay/shopify-clj/status.png)](https://jarkeeper.com/jamesmacaulay/shopify-clj)
+
 A [Clojure][clojure] library for interacting with the [Shopify][shopify] platform.
 
 * `shopify.resources`: functions for interacting with [a shop's resources][resource-docs].
