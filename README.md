@@ -48,6 +48,15 @@ Private apps are the quickest way of getting started. Just [get some credentials
            :password "195b5baab7ce4581a861e925e930301d"})
 ```
 
+### Public App Authentication
+
+Once you have done the OAuth dance and received shop approval you can connect using the following hash:
+
+```clojure
+(def auth {:shop "my-dev-shop.myshopify.com"
+           :access-token "195b5baab7ce4581a861e925e930301d"})
+```
+
 ### Making requests
 
 Fire up a REPL and define an auth map for a private app as shown above. Now bring in the `shopify.resources` namespace:
