@@ -139,6 +139,8 @@ This is used to configure the workflow provided by `shopify.friend`:
 
 Here's [a working example][example-server]. With the middleware in place, you can authenticate a shop by hitting `/auth/shopify?shop=some-shop.myshopify.com`. This is most often done [with a form][example-login-form].
 
+**Note** Make sure to include [wrap-params](https://ring-clojure.github.io/ring/ring.middleware.params.html#var-wrap-params) in your middleware, so that the extension can parse the shop parameter.
+
 You can get a list of the current Shopify authentications from the request like so:
 
 ```clojure
