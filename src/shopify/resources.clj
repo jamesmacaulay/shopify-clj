@@ -1,9 +1,9 @@
 (ns shopify.resources
   "Functions for making requests against a shop's authenticated API."
-  (:use [shopify.resources.names :only [member-keyword
-                                        collection-keyword]])
   (:require [shopify.resources.client :as client]
             [shopify.resources.routes :as routes]
+            [shopify.resources.names :as names]
+            [shopify.util :as util]
             [flatland.useful.parallel :as parallel]
             [plumbing.core :as plumbing]
             clj-http.core))
@@ -19,7 +19,7 @@
   "Takes a resource type and a map of member attributes. Returns a transformed map with all non-path params hoisted into their own map keyed by the singular form of the type keyword. E.g. `{:id 99, :page {:title \"foo\"}}`."
   [resource-type attrs]
   (let [[scope-params attrs] (routes/extract-path-params resource-type attrs)
-        root-key (member-keyword resource-type)]
+        root-key (names/member-keyword resource-type)]
     (if (empty? attrs)
       scope-params
       (assoc scope-params root-key attrs))))
@@ -112,12 +112,20 @@
 (defn- extract-collection
   "Takes a response map and returns the collection of the given type, if it is present."
   [response resource-type]
-  (get-in response [:body (collection-keyword resource-type)]))
+  (let [kw (-> resource-type
+               names/collection-keyword
+               util/underscores->dashes
+               keyword)]
+    (get-in response [:body kw])))
 
 (defn- extract-member
   "Takes a response map and returns the member of the given type, if it is present."
   [response resource-type]
-  (get-in response [:body (member-keyword resource-type)]))
+  (let [kw (-> resource-type
+               names/member-keyword
+               util/underscores->dashes
+               keyword)]
+    (get-in response [:body kw])))
 
 (defmacro with-opts
   "A convenience macro to define the same base request options for any request to the Shopify API. `opts` would most often be an auth map, but it could include any default options for the request."
